@@ -4,15 +4,14 @@
 import unittest
 import matplotlib
 matplotlib.use('Agg')
-SILENT = True
-import warnings
-if SILENT:
-    warnings.filterwarnings("ignore")
+<<<<<<< HEAD
+=======
 
+>>>>>>> bc9859eedf2195e6f81fc149cc5cc8c34009ac5b
 from neuronunit.allenapi.allen_data_driven import opt_setup, opt_setup_two, opt_exec
 from neuronunit.allenapi.allen_data_driven import opt_to_model,wrap_setups
 from neuronunit.allenapi.utils import dask_map_function
-#from neuronunit.optimization.optimization_management import check_bin_vm_soma
+from neuronunit.optimization.optimization_management import check_bin_vm_soma
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS, to_bpo_param
 from neuronunit.optimization.optimization_management import dtc_to_rheo,inject_and_plot_model
 import numpy as np
@@ -27,7 +26,7 @@ import copy
 
 
 
-class testOptimizationAllenMultiSpike(unittest.TestCase):
+class testOptimization(unittest.TestCase):
     def setUp(self):
         self = self
         self.ids = [ 324257146,
@@ -47,8 +46,8 @@ class testOptimizationAllenMultiSpike(unittest.TestCase):
         model.params = BPO_PARAMS[model_type]
         fixed_current = 122 *qt.pA
         if model_type == "ADEXP":
-            NGEN = 50
-            MU = 15
+            NGEN = 100
+            MU = 20
         else:
             NGEN = 100
             MU = 100
@@ -68,7 +67,7 @@ class testOptimizationAllenMultiSpike(unittest.TestCase):
         best_ind = hall_of_fame[0]
         fitnesses = cell_evaluator.evaluate_with_lists(best_ind)
         target.vm_soma = suite.traces['vm15']
-        #check_bin_vm_soma(target,opt)
+        check_bin_vm_soma(target,opt)
         return np.sum(fitnesses)
     def test_opt_relative_diff(self):
         model_type = "ADEXP"
@@ -78,6 +77,7 @@ class testOptimizationAllenMultiSpike(unittest.TestCase):
         model_type = "ADEXP"
         sum_fit = self.optimize_job(model_type,score_type=ZScore)
         assert sum_fit<0.7
+
     def test_opt_relative_diff_izhi(self):
         model_type = "IZHI"
         self.optimize_job(model_type,score_type=RelativeDifferenceScore)

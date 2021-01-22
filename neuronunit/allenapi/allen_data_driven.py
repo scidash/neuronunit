@@ -18,8 +18,9 @@ from sciunit.scores.collections import ScoreArray
 from neuronunit.allenapi import make_allen_tests_from_id
 from neuronunit.allenapi.make_allen_tests_from_id import *
 from neuronunit.allenapi.make_allen_tests import AllenTest
-from neuronunit.optimization.optimization_management import check_bin_vm_soma,inject_model_soma
-
+#from neuronunit.optimization.optimization_management import check_bin_vm_soma,
+from neuronunit.optimization.optimization_management import inject_model_soma
+from neuronunit.tests import *
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
 from bluepyopt.allenapi.utils import dask_map_function
 
@@ -242,3 +243,56 @@ def opt_to_model(hall_of_fame,cell_evaluator,suite, target_current, spk_count):
     _,_,_,target = inject_model_soma(target,solve_for_current=target_current['value'])
     _,_,_,opt = inject_model_soma(opt,solve_for_current=target_current['value'])
     return opt,target
+
+def make_allen_hard_coded():
+  # hard/hand code ephys constraints
+  from quantities import Hz,pA
+  from neuronunit.optimization.optimization_management import TSD
+  import pandas as pd
+
+  rt = RheobaseTest(observation={'mean':70*qt.pA,'std':70*qt.pA})
+  tc = TimeConstantTest(observation={'mean':24.4*qt.ms,'std':24.4*qt.ms})
+  ir = InputResistanceTest(observation={'mean':132*qt.MOhm,'std':132*qt.MOhm})
+  rp = RestingPotentialTest(observation={'mean':-71.6*qt.mV,'std':77.5*qt.mV})
+
+  allen_tests = [rt,tc,rp,ir]
+  for t in allen_tests:
+      t.score_type = RelativeDifferenceScore
+  allen_suite482493761 = TestSuite(allen_tests)
+  allen_suite482493761.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/482493761"
+  rt = RheobaseTest(observation={'mean':190*qt.pA,'std':190*qt.pA})
+  tc = TimeConstantTest(observation={'mean':13.8*qt.ms,'std':13.8*qt.ms})
+  ir = InputResistanceTest(observation={'mean':132*qt.MOhm,'std':132*qt.MOhm})
+  rp = RestingPotentialTest(observation={'mean':-77.5*qt.mV,'std':77.5*qt.mV})
+  fi = FITest(observation={'mean':0.09*Hz/pA})#'std':77.5*qt.mV})
+
+  allen_tests = [rt,tc,rp,ir]#,fi]
+  for t in allen_tests:
+      t.score_type = RelativeDifferenceScore
+  #allen_tests[-1].score_type = ZScore
+  allen_suite471819401 = TestSuite(allen_tests)
+  allen_suite471819401.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/471819401"
+  list_of_dicts = []
+  cells={}
+  cells['471819401'] = TSD(allen_suite471819401)
+  cells['482493761'] = TSD(allen_suite482493761)
+
+  allen_tests = [rt,fi]
+  for t in allen_tests:
+     t.score_type = RelativeDifferenceScore
+  allen_suite3 = TestSuite(allen_tests)
+
+  cells['fi_curve'] = TSD(allen_suite3)
+
+  for k,v in cells.items():
+      observations = {}
+      for k1 in cells['482493761'].keys():
+          vsd = TSD(v)
+          if k1 in vsd.keys():
+              vsd[k1].observation['mean']
+
+              observations[k1] = np.round(vsd[k1].observation['mean'],2)
+              observations['name'] = k
+      list_of_dicts.append(observations)
+  df = pd.DataFrame(list_of_dicts)
+  return allen_suite471819401,allen_suite482493761,df,cells

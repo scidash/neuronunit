@@ -188,12 +188,7 @@ def opt_exec(MU,NGEN,mapping_funct,cell_evaluator,mutpb=0.05,cxpb=0.6):
 
 def opt_to_model(hall_of_fame,cell_evaluator,suite, target_current, spk_count):
     best_ind = hall_of_fame[0]
-    #best_ind_dict = cell_evaluator.param_dict(best_ind)
-    #cell_evaluator.param_dict(best_ind)
     model = cell_evaluator.cell_model
-    #model.attrs = {str(k):float(v) for k,v in cell_evaluator.param_dict(best_ind).items()}
-    #model._backend.attrs = model.attrs
-    #model._backend.attrs = opt.attrs
 
     opt = model.model_to_dtc()
     opt.attrs = {str(k):float(v) for k,v in cell_evaluator.param_dict(best_ind).items()}
@@ -212,55 +207,49 @@ def opt_to_model(hall_of_fame,cell_evaluator,suite, target_current, spk_count):
     _,_,_,target = inject_model_soma(target,solve_for_current=target_current['value'])
     _,_,_,opt = inject_model_soma(opt,solve_for_current=target_current['value'])
     return opt,target
-    '''
-    #check_bin_vm30(opt,opt)
-    check_bin_vm15(opt,opt)
 
+from scipy.interpolate import interp1d
+def downsample(array, npts):
+    interpolated = interp1d(np.arange(len(array)), array, axis = 0, fill_value = 'extrapolate')
+    downsampled = interpolated(np.linspace(0, len(array), npts))
+    return downsampled
 
-    #check_bin_vm30(target,target)
+def make_stim_waves_func():
+    import allensdk.core.json_utilities as json_utilities
+    import pickle
+    neuronal_model_id = 566302806
+    # download model metadata
+    try:
+        ephys_sweeps = json_utilities.read('ephys_sweeps.json')
+    except:
+        from allensdk.api.queries.glif_api import GlifApi
 
+        glif_api = GlifApi()
+        nm = glif_api.get_neuronal_models_by_id([neuronal_model_id])[0]
 
-    check_bin_vm15(target,target)
+        from allensdk.core.cell_types_cache import CellTypesCache
+        # download information about the cell
+        ctc = CellTypesCache()
+        ctc.get_ephys_data(nm['specimen_id'], file_name='stimulus.nwb')
+        ctc.get_ephys_sweeps(nm['specimen_id'], file_name='ephys_sweeps.json')
+        ephys_sweeps = json_utilities.read('ephys_sweeps.json')
 
-
-
-    gen_numbers = logs.select('gen')
-    min_fitness = logs.select('min')
-    max_fitness = logs.select('max')
-    avg_fitness = logs.select('avg')
-    plt.plot(gen_numbers, max_fitness, label='max fitness')
-    plt.plot(gen_numbers, avg_fitness, label='avg fitness')
-    plt.plot(gen_numbers, min_fitness, label='min fitness')
-
-    plt.plot(gen_numbers, min_fitness, label='min fitness')
-    plt.semilogy()
-    plt.xlabel('generation #')
-    plt.ylabel('score (# std)')
-    plt.legend()
-    plt.xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
-    plt.show()
-    '''
-'''
-cp = {}
-cp['final_pop'] = final_pop
-cp['hall_of_fame'] = hall_of_fame
-
-
-#with open('allen_opt.p','wb') as f:
-#    pickle.dump(f,[final_pop, hall_of_fame, logs, hist])
-
-
-
-
-
-
-
-
-
-optimisation = bpop.optimisations.DEAPOptimisation(
-        evaluator=cell_evaluator2,
-        offspring_size = MU,
-        map_function = dask_map_function,
-        selector_name='IBEA',mutpb=0.1,cxpb=0.35,seeded_pop=[cp['final_pop'],cp['hall_of_fame']])#,seeded_current=target_current)
-final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=50)
-'''
+    ephys_file_name = 'stimulus.nwb'
+    sweep_numbers = [ s['sweep_number'] for s in ephys_sweeps if s['stimulus_units'] == 'Amps' ]
+    stimulus = [ s for s in ephys_sweeps if s['stimulus_units'] == 'Amps' \
+     if s['num_spikes'] != None \
+     if s['stimulus_name']!='Ramp' and s['stimulus_name']!='Short Square']
+    amplitudes = [ s['stimulus_absolute_amplitude'] for s in stimulus ]
+    durations = [ s['stimulus_duration'] for s in stimulus ]
+    expeceted_spikes = [ s['num_spikes'] for s in stimulus ]
+    delays = [ s['stimulus_start_time'] for s in stimulus ]
+    sn = [ s['sweep_number'] for s in stimulus ]
+    make_stim_waves = {}
+    for i,j in enumerate(sn):
+        make_stim_waves[j] = {}
+        make_stim_waves[j]['amplitude'] = amplitudes[i]
+        make_stim_waves[j]['delay'] = delays[i]
+        make_stim_waves[j]['durations'] = durations[i]
+        make_stim_waves[j]['expeceted_spikes'] = expeceted_spikes[i]
+    pickle.dump(make_stim_waves,open('waves.p','wb'))
+    return make_stim_waves
