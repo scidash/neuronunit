@@ -297,15 +297,17 @@ def write_opt_to_nml(path, param_dict) -> None:
 
 
 
-def get_rh(DataTC:dtc,
-            RheobaseTest:rtest_class,
-            bool:bind_vm=False) -> DataTC:
+def get_rh(dtc:DataTC,
+            rtest_class:RheobaseTest,
+            bind_vm:bool=False) -> DataTC:
     """
     --args:
         :param object dtc:
-        :param object rtest_class:
+        :param object Rheobase Test Class:
     :-- returns: object dtc:
-    -- Synopsis: This is used to generate a rheobase test, given unknown experimental observations.s
+    -- Synopsis: This is used to recover/produce
+     a rheobase test class instance,
+     given unknown experimental observations.
     """
     place_holder = {"mean": 10 * pq.pA}
     backend_ = dtc.backend
@@ -328,7 +330,7 @@ def get_rh(DataTC:dtc,
     return dtc
 
 
-def get_new_rtest(DataTC:dtc)->RheobaseTest:
+def get_new_rtest(dtc:DataTC)->RheobaseTest:
     place_holder = {"mean": 10 * pq.pA}
     f = RheobaseTest
     rtest = f(observation=place_holder, name="RheobaseTest")
@@ -949,8 +951,6 @@ def efel_evaluation(instance_obj: Any, specific_filter_list: List = None,current
                 return instance_obj
 
             trace3["V"] = vm_used_mag
-        else:
-            pass
         if specific_filter_list is None:
             specific_filter_list = [
                 "burst_ISI_indices",
@@ -991,7 +991,7 @@ def efel_evaluation(instance_obj: Any, specific_filter_list: List = None,current
 
 
 def inject_and_plot_model(
-    pre_model: DataTC, figname=None, plotly=True, verbose=False
+    dtc: DataTC, figname=None, plotly=True, verbose=False
 ) -> Union[Any, Any, Any]:
     """
     -- Synopsis: produce rheobase injection value
@@ -999,10 +999,10 @@ def inject_and_plot_model(
     with known attributes
     and known rheobase current injection value.
     """
-    pre_model = dtc_to_rheo(pre_model)
-    model = pre_model.dtc_to_model()
-    uc = {"amplitude": pre_model.rheobase, "duration": DURATION, "delay": DELAY}
-    if pre_model.jithub or "NEURON" in str(pre_model.backend):
+    dtc = dtc_to_rheo(dtc)
+    model = dtc.dtc_to_model()
+    uc = {"amplitude": dtc.rheobase, "duration": DURATION, "delay": DELAY}
+    if dtc.jithub or "NEURON" in str(dtc.backend):
         vm = model._backend.inject_square_current(**uc)
     else:
         vm = model.inject_square_current(uc)
@@ -1015,7 +1015,7 @@ def inject_and_plot_model(
     if not plotly:
         plt.clf()
         plt.figure()
-        if pre_model.backend in str("HH"):
+        if dtc.backend in str("HH"):
             plt.title("Conductance based model membrane potential plot")
         else:
             plt.title("Membrane potential plot")
@@ -1032,23 +1032,18 @@ def inject_and_plot_model(
         if figname is not None:
             fig.write_image(str(figname) + str(".png"))
         else:
-            return vm, fig, pre_model
-    return [vm, plt, pre_model]
+            return vm, fig, dtc
+    return [vm, plt, dtc]
 
 
-# from sciunit.tests import base
 def switch_logic(xtests):  # ->
     try:
-        aTSD = TSD()
+        atsd = TSD()
     except:
-        # basically an object defined in the currently inhabited file:
-        # mystery why above won't work.
-        aTSD = neuronunit.optimization.optimization_management.TSD()
+        atsd = neuronunit.optimization.optimization_management.TSD()
 
-    if type(xtests) is type(aTSD):
+    if type(xtests) is type(atsd):
         xtests = list(xtests.values())
-    # if type(xtests) is type(list()):
-    #    pass
     for t in xtests:
         if str("FITest") == t.name:
             t.active = True
