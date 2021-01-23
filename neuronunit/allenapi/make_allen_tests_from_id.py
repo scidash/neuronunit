@@ -284,8 +284,8 @@ def make_suite_from_static_models(vm_soma, vm30, rheobase, currents, vmrh, speci
         sm = StaticModel(vm=vm30)
     sm.rheobase = rheobase
     sm.vm_soma = vm_soma
+    sm = efel_evaluation(sm,current=rheobase)
 
-    sm = efel_evaluation(sm)
 
     sm = rekeyed(sm)
     useable = False

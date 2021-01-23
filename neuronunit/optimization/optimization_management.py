@@ -1111,7 +1111,7 @@ def neutral_values(keyed: dict = {}) -> dict:
     return keyed
 
 
-def initialise_test(v:Any, rheobase:Any)->dict:
+def initialise_test(v:Any, rheobase:Any=None)->dict:
     if not isinstance(v, Iterable):
         v = [v]
     v = switch_logic(v)
