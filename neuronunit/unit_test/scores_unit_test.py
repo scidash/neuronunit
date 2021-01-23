@@ -3,49 +3,62 @@
 
 import unittest
 import matplotlib
-matplotlib.use('Agg')
+
+matplotlib.use("Agg")
 SILENT = True
 import warnings
+
 if SILENT:
     warnings.filterwarnings("ignore")
 
 from neuronunit.allenapi.allen_data_driven import opt_setup, opt_setup_two, opt_exec
-from neuronunit.allenapi.allen_data_driven import opt_to_model,wrap_setups
+from neuronunit.allenapi.allen_data_driven import opt_to_model, wrap_setups
 from neuronunit.allenapi.utils import dask_map_function
-#from neuronunit.optimization.optimization_management import check_bin_vm_soma
-from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS, to_bpo_param
-from neuronunit.optimization.optimization_management import dtc_to_rheo,inject_and_plot_model
+from neuronunit.optimization.model_parameters import (
+    MODEL_PARAMS,
+    BPO_PARAMS,
+    to_bpo_param,
+)
+from neuronunit.optimization.optimization_management import (
+    dtc_to_rheo,
+    inject_and_plot_model,
+)
 import numpy as np
 from neuronunit.optimization.data_transport_container import DataTC
-import efel
 from jithub.models import model_classes
 import matplotlib.pyplot as plt
 import quantities as qt
 import os
-from sciunit.scores import RelativeDifferenceScore,ZScore
-import copy
 
+from sciunit.scores import RelativeDifferenceScore, ZScore
+from sciunit.utils import config_set, config_get
+
+config_set("PREVALIDATE", False)
+assert config_get("PREVALIDATE") is False
 
 
 class testOptimizationAllenMultiSpike(unittest.TestCase):
     def setUp(self):
         self = self
-        self.ids = [ 324257146,
-                325479788,
-                476053392,
-                623893177,
-                623960880,
-                482493761,
-                471819401
-               ]
+        self.ids = [
+            324257146,
+            325479788,
+            476053392,
+            623893177,
+            623960880,
+            482493761,
+            471819401,
+        ]
+        # In principle any index into data should work
         self.specimen_id = self.ids[1]
-    def optimize_job(self,model_type,score_type=ZScore):
+
+    def optimize_job(self, model_type, score_type=ZScore):
         find_sweep_with_n_spikes = 8
         dtc = DataTC()
         dtc.backend = model_type
         model = dtc.dtc_to_model()
         model.params = BPO_PARAMS[model_type]
-        fixed_current = 122 *qt.pA
+        fixed_current = 122 * qt.pA
         if model_type == "ADEXP":
             NGEN = 50
             MU = 15
@@ -54,36 +67,42 @@ class testOptimizationAllenMultiSpike(unittest.TestCase):
             MU = 100
 
         mapping_funct = dask_map_function
-        cell_evaluator,simple_cell,suite,target_current,spk_count = wrap_setups(
-                  self.specimen_id,
-                  model_type,
-                  find_sweep_with_n_spikes,
-                  template_model=copy.copy(model),
-                  fixed_current=False,
-                  cached=False,
-                  score_type=score_type
+        cell_evaluator, simple_cell, suite, target_current, spk_count = wrap_setups(
+            self.specimen_id,
+            model_type,
+            find_sweep_with_n_spikes,
+            template_model=model,
+            fixed_current=False,
+            cached=False,
+            score_type=score_type,
         )
-        final_pop, hall_of_fame, logs, hist = opt_exec(MU,NGEN,mapping_funct,cell_evaluator)
-        opt,target = opt_to_model(hall_of_fame,cell_evaluator,suite, target_current, spk_count)
+        final_pop, hall_of_fame, logs, hist = opt_exec(
+            MU, NGEN, mapping_funct, cell_evaluator
+        )
+        opt, target = opt_to_model(
+            hall_of_fame, cell_evaluator, suite, target_current, spk_count
+        )
         best_ind = hall_of_fame[0]
         fitnesses = cell_evaluator.evaluate_with_lists(best_ind)
-        target.vm_soma = suite.traces['vm15']
-        #check_bin_vm_soma(target,opt)
+        target.vm_soma = suite.traces["vm15"]
         return np.sum(fitnesses)
+
     def test_opt_relative_diff(self):
         model_type = "ADEXP"
-        sum_fit = self.optimize_job(model_type,score_type=RelativeDifferenceScore)
-        assert sum_fit<9.0
+        sum_fit = self.optimize_job(model_type, score_type=RelativeDifferenceScore)
+        assert sum_fit < 9.0
+
     def test_opt_ZScore(self):
         model_type = "ADEXP"
-        sum_fit = self.optimize_job(model_type,score_type=ZScore)
-        assert sum_fit<0.7
+        sum_fit = self.optimize_job(model_type, score_type=ZScore)
+        assert sum_fit < 0.7
+
     def test_opt_relative_diff_izhi(self):
         model_type = "IZHI"
-        self.optimize_job(model_type,score_type=RelativeDifferenceScore)
-        assert sum_fit<9.0
+        self.optimize_job(model_type, score_type=RelativeDifferenceScore)
+        assert sum_fit < 9.0
 
     def test_opt_ZScore_izhi(self):
         model_type = "IZHI"
-        self.optimize_job(model_type,score_type=ZScore)
-        assert sum_fit<0.7
+        self.optimize_job(model_type, score_type=ZScore)
+        assert sum_fit < 0.7
