@@ -32,13 +32,10 @@ install:
 script:
   - export NC_HOME='.' # NeuroConstruct isn't used but tests need this
                        # variable set to pass.
-  - cd neuronunit/unit_test; ipython notebook relative_diff_unit_test.ipynb cd -;
   - cd neuronunit/unit_test; python -m unittest scores_unit_test.py; cd -;
   - cd neuronunit/unit_test; coverage run rheobase_dtc_test.py; cd -;
   - cd neuronunit/unit_test; coverage run adexp_opt.py; cd -;
   - cd neuronunit/unit_test; coverage run izhi_opt.py; cd -;
-  - cd neuronunit/unit_test; coverage report; cd -;
-
-  #- sh test.sh
+  - sh test.sh
 after_success:
   - coveralls
