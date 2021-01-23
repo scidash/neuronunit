@@ -1079,7 +1079,7 @@ def switch_logic(xtests):
     return xtests
 
 
-def active_values(keyed:dict={}, rheobase, square=None):
+def active_values(keyed:dict, rheobase, square:dict=None):
     keyed["injected_square_current"] = {}
     if square is None:
         if isinstance(rheobase, type(dict())):

@@ -23,7 +23,7 @@ from neuronunit.allenapi.make_allen_tests import AllenTest
 from neuronunit.optimization.optimization_management import inject_model_soma
 from neuronunit.tests import *
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
-from bluepyopt.allenapi.utils import dask_map_function
+from neuronunit.allenapi.utils import dask_map_function
 
 
 def opt_setup(
