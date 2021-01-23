@@ -338,7 +338,7 @@ def get_new_rtest(dtc:DataTC)->RheobaseTest:
     return rtest
 
 
-def get_rtest(DataTC:dtc)->RheobaseTest:
+def get_rtest(dtc: DataTC)->RheobaseTest:
     if not hasattr(dtc, "tests"):
         rtest = get_new_rtest(dtc)
     else:
@@ -1036,7 +1036,7 @@ def inject_and_plot_model(
     return [vm, plt, dtc]
 
 
-def switch_logic(xtests):  # ->
+def switch_logic(xtests):
     try:
         atsd = TSD()
     except:
@@ -1079,7 +1079,7 @@ def switch_logic(xtests):  # ->
     return xtests
 
 
-def active_values(keyed, rheobase, square=None):
+def active_values(keyed:dict={}, rheobase, square=None):
     keyed["injected_square_current"] = {}
     if square is None:
         if isinstance(rheobase, type(dict())):
@@ -1111,8 +1111,10 @@ def neutral_values(keyed: dict = {}) -> dict:
     return keyed
 
 
-def initialise_test(v, rheobase=None):
-    v = switch_logic([v])
+def initialise_test(v:Any, rheobase:Any)->dict:
+    if not isinstance(v, Iterable):
+        v = [v]
+    v = switch_logic(v)
     v = v[0]
     k = v.name
     if not hasattr(v, "params"):
@@ -1134,7 +1136,7 @@ def initialise_test(v, rheobase=None):
         v.params["injected_square_current"]["delay"] = PASSIVE_DELAY
         v.params["injected_square_current"]["duration"] = PASSIVE_DURATION
         v.params["injected_square_current"]["amplitude"] = 0.0 * pq.pA
-    v.params = v.params  # ['injected_square_current']
+    v.params = v.params
     if "delay" in v.params["injected_square_current"].keys():
         v.params["tmax"] = (
             v.params["injected_square_current"]["delay"]
