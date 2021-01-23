@@ -92,7 +92,7 @@ try:
 except:
     warnings.warn('SKLearn library not available, consider installing')
 
-
+'''
 def set_up_obj_tests(model_type:Text="")-> Any:
     """
     Args:
@@ -164,7 +164,7 @@ def test_all_objective_test(free_parameters,
     tests = TSD(copy.copy(simulated_data_tests))
     check_tests = copy.copy(tests)
     return tests, OM, target
-
+'''
 
 
 class TSD(dict):
@@ -187,17 +187,17 @@ class TSD(dict):
           tests = OrderedDict({t.name:t for t in tests})
        super(TSD,self).__init__()
        self.update(tests)
-       if 'allen_hack' in self.keys():
-           self.three_step = allen_hack
-           self.pop('allen_hack',None)
+       #if 'allen_hack' in self.keys():
+       #   self.three_step = allen_hack
+       #   self.pop('allen_hack',None)
 
 
 
-       if 'name' in self.keys():
-           self.cell_name = tests['name']
-           self.pop('name',None)
-       else:
-           self.cell_name = 'simulated data'
+       #if 'name' in self.keys():
+           #self.cell_name = tests['name']
+           #self.pop('name',None)
+       #else:
+       #   self.cell_name = 'simulated data'
     def display(self):
         from IPython.display import display
         if hasattr(self,'ga_out'):
@@ -295,12 +295,11 @@ class TSD(dict):
             return ga_out
         '''
 
-
+import numpy, time
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def random_p(backend):
-    ranges = MODEL_PARAMS[backend]
-    import numpy, time
+def random_p(model_type):
+    ranges = MODEL_PARAMS[model_type]
     date_int = int(time.time())
     numpy.random.seed(date_int)
     random_param1 = {} # randomly sample a point in the viable parameter space.
@@ -337,7 +336,7 @@ def write_models_for_nml_db(dtc):
         writer = csv.writer(writeFile)
         writer.writerows(df)
 
-def write_opt_to_nml(path,param_dict):
+def write_opt_to_nml(path,param_dict)->None:
     '''
         -- Inputs: desired file path, model parameters to encode in NeuroML2
         -- Outputs: NeuroML2 file.
@@ -458,7 +457,8 @@ def get_rtest(dtc):
             rtest = get_new_rtest(dtc)
     return rtest
 
-def dtc_to_rheo(Any:dtc=object(),bind_vm=False)->Any:
+
+def dtc_to_rheo(dtc:DataTC,bind_vm:bool=False)->DataTC:
     '''
     --Synopsis: If  test taking data, and objects are present (observations etc).
     Take the rheobase test and store it in the data transport container.
@@ -482,7 +482,6 @@ def dtc_to_rheo(Any:dtc=object(),bind_vm=False)->Any:
         temp_vm = model.get_membrane_potential()
         min = np.min(temp_vm)
         if np.isnan(temp_vm.any()):
-            print(temp_vm,'nan')
             dtc.rheobase = None
         if bind_vm:
             dtc.vmrh = temp_vm
@@ -518,18 +517,19 @@ def basic_expVar(trace1, trace2):
         return 1.0
     else:
         return (var_trace1+var_trace2-var_trace1_minus_trace2)/(var_trace1+var_trace2)
-
-def jrt(use_test,backend,protocol={'elephant':True,'allen':False}):
-    use_test = TSD(use_test)
-    use_test.use_rheobase_score = True
-    edges = model_parameters.MODEL_PARAMS[backend]
-    OM = OptMan(use_test,
-        backend=backend,
+'''
+def jrt(use_tests,model_type,
+        protocol={'elephant':True,'allen':False})->OptMan:
+    use_tests = TSD(use_tests)
+    use_tests.use_rheobase_score = True
+    edges = model_parameters.MODEL_PARAMS[model_type]
+    OM = OptMan(use_tests,
+        backend=model_type,
         boundary_dict=edges,
         protocol=protocol)
     return OM
-
-def train_length(dtc):
+'''
+def train_length(dtc:DataTC)->DataTC:
     if not hasattr(dtc,'everything'):
         dtc.everything = {}
     vm = copy.copy(dtc.vm_soma)
@@ -609,7 +609,6 @@ def exclude_non_viable_deflections(responses: dict={}) -> float:
             return 1000.0
         if np.abs(results['AHP_depth'])>=105:
             return 1000.0
-
         if np.max(vm)>=0:
             snippets = get_spike_waveforms(vm)
             widths = spikes2widths(snippets)
@@ -639,6 +638,7 @@ class NUFeature_standard_suite(object):
     def __init__(self,test,model):
         self.test = test
         self.model = model
+        self.score_array = None
     def calculate_score(self,responses:dict={}) -> float:
         dtc = responses['dtc']
         model = dtc.dtc_to_model()
@@ -648,9 +648,7 @@ class NUFeature_standard_suite(object):
             result = exclude_non_viable_deflections(responses)
             if result != 0:
                 return result
-
         self.test.prediction = self.test.generate_prediction(model)
-
         if responses['rheobase'] is not None:
             if self.test.prediction is not None:
                 score_gene = self.test.judge(model,prediction=self.test.prediction,deep_error=True)
@@ -679,13 +677,14 @@ class NUFeature_standard_suite(object):
             lns = 1000
         if lns==np.inf or lns==np.nan:
             lns = 1000
+
         return lns
 
 def make_evaluator(nu_tests,
                     PARAMS,
                     experiment=str('Neocortex pyramidal cell layer 5-6'),
                     model=str('IZHI'),
-                    score_type=RelativeDifferenceScore) -> Tuple[Any,Any,Any,List[Any]]:
+                    score_type=RelativeDifferenceScore) -> Union[Any,Any,Any,List[Any]]:
 
     if type(nu_tests) is type(dict()):
         nu_tests = list(nu_tests.values())
@@ -707,7 +706,10 @@ def make_evaluator(nu_tests,
             feature_name,
             ft)
         objectives.append(objective)
+
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
+    #cell_evaluator.SA = ScoreArray(nu_tests, objectives)
+
     sweep_protocols = []
     protocol = ephys.protocols.SweepProtocol('step1', [None], [None])
     sweep_protocols.append(protocol)
@@ -718,6 +720,8 @@ def make_evaluator(nu_tests,
             fitness_protocols={onestep_protocol.name: onestep_protocol},
             fitness_calculator=score_calc,
             sim='euler')
+
+
     simple_cell.params_by_names(copy.copy(BPO_PARAMS)[model].keys())
     return (cell_evaluator, simple_cell, score_calc, [tt.name for tt in nu_tests])
 
@@ -730,9 +734,8 @@ def get_binary_file_downloader_html(bin_file_path, file_label='File'):
     bin_str = base64.b64encode(data).decode()
     href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{os.path.basename(bin_file_path)}">Download {file_label}</a>'
     return href
-#import utils
 
-def instance_opt(constraints,PARAMS,test_key,model_value,MU,NGEN,diversity,full_test_list=None,use_streamlit=False,score_type=RelativeDifferenceScore):
+def _opt(constraints,PARAMS,test_key,model_value,MU,NGEN,diversity,full_test_list=None,use_streamlit=False,score_type=RelativeDifferenceScore):
     '''
     used with streamlit
     '''
@@ -767,156 +770,6 @@ def instance_opt(constraints,PARAMS,test_key,model_value,MU,NGEN,diversity,full_
     best_fit_val = best_ind.fitness.values
     return final_pop, hall_of_fame, logs, hist,best_ind,best_fit_val,opt
 
-def rubbish():
-    pass
-    '''
-    best_ind_dict = cell_evaluator.param_dict(best_ind)
-    model = cell_evaluator.cell_model
-    cell_evaluator.param_dict(best_ind)
-    model.attrs = {str(k):float(v) for k,v in cell_evaluator.param_dict(best_ind).items()}
-    opt = model.model_to_dtc()
-    opt.attrs = {str(k):float(v) for k,v in cell_evaluator.param_dict(best_ind).items()}
-    if type(constraints) is type(TSD()):
-    constraints = list(constraints.values())
-    if hasattr(constraints,'tests'):# is type(TestSuite):
-    constraints = constraints.tests
-    opt.tests = constraints
-
-
-    passed = False
-    from IPython.display import display
-    if len(constraints)>1:
-    try:
-        opt.self_evaluate(tests=constraints)
-
-        obs_preds = opt.make_pretty(constraints)
-        display(obs_preds)
-        passed = True
-    except:
-        opt.self_evaluate(tests=constraints)
-        print(opt.SA)
-        display(pd.DataFrame(opt.SA))
-        print('something went wrong with stats')
-        passed = False
-    if passed:
-
-
-    zvalues_opt = opt.SA.values
-    chi_sqr_opt= np.sum(np.array(zvalues_opt)**2)
-    p_value = 1-scipy.stats.chi2.cdf(chi_sqr_opt, 8)
-    frame = opt.SA.to_frame()
-    score_frame = frame.T
-    obs_preds = opt.obs_preds.T
-    #return final_pop, hall_of_fame, logs, hist, opt
-    else:
-    return final_pop, hall_of_fame, logs, hist, opt, None, None, None
-
-    if not use_streamlit:
-    return final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value
-
-    else:
-
-    import streamlit as st
-    #opt.self_evaluate(tests=use_tests)
-
-    #opt.self_evaluate(opt.tests)
-    if full_test_list is not None:
-        opt.make_pretty(full_test_list)
-    else:
-        if len(constraints)<len(opt.tests):
-            use_tests = opt.tests
-        else:
-            use_tests = constraints
-        opt.make_pretty(use_tests)
-
-    st.markdown('---')
-    st.success("Model best fit to experiment {0}".format(test_key))
-    #st.markdown("Would you like to pickle the optimal model? (Note not implemented yet, but trivial)")
-
-    st.markdown('---')
-    #st.write(score_frame)
-
-    st.markdown('\n\n\n\n')
-
-    #obs_preds.rename(columns=)
-    st.table(obs_preds)
-    st.markdown('\n\n\n\n')
-
-    #try:
-    #  st.dataframe(obs_preds.style.background_gradient(cmap ='viridis').set_properties(**{'font-size': '20px'}))
-    #except:
-
-    #  sns.heatmap(obs_preds, cmap ='RdYlGn', linewidths = 0.30, annot = True)
-    #  st.pyplot()
-    '''
-    '''
-    sns.set(context="paper", font="monospace")
-
-    # Set up the matplotlib figure
-    f, ax = plt.subplots(figsize=(12, 12))
-
-    g = sns.heatmap(score_frame, linewidths = 0.30, annot = True)
-    g.set_xticklabels(g.get_xticklabels(),rotation=45)
-
-    st.pyplot()
-    '''
-    '''
-    #st.markdown("""
-    #-----
-    #({0}, and {1}):
-    #-----
-    #""")
-
-    st.markdown('\n\n\n\n')
-
-    st.markdown("----")
-    st.markdown("""
-    -----
-    The optimal model parameterization is
-    -----
-    """)
-    best_params_frame = pd.DataFrame([opt.attrs])
-    st.write(best_params_frame)
-
-
-
-
-
-    st.markdown("----")
-
-    st.markdown("Model behavior at rheobase current injection")
-
-    vm,fig = inject_and_plot_model(opt,plotly=True)
-    st.write(fig)
-    st.markdown("----")
-
-    st.markdown("Model behavior at -10pA current injection")
-    fig = inject_and_plot_passive_model(opt,opt,plotly=True)
-    st.write(fig)
-    st.markdown("----")
-    st.write("($\chi^{2}$ and $p-value$) =")
-    #st.write("($\chi^{2}$, $p-value$)=")
-    st.markdown("({0} , {1})".format(chi_sqr_opt, p_value))
-
-    #plt.show()
-
-
-
-    #st.markdown("""
-    #-----
-    #Model Performance Relative to fitting data {0}
-    #-----
-    #""".format(sum(best_ind.fitness.values)/(30*len(constraints))))
-    # radio_value = st.sidebar.radtio("Target Number of Samples",[10,20,30])
-    #st.markdown("""
-    #-----
-    #This score is {0} worst score is {1}
-    #-----
-    #""".format(sum(best_ind.fitness.values),30*len(constraints)))
-    #plot_as_normal(opt)
-
-    return final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value,best_params_frame
-    '''
 def full_statistical_description(constraints,\
                                 exp_cell,MODEL_PARAMS,test_key,\
                                 model_value,MU,NGEN,diversity,\
@@ -936,7 +789,7 @@ def full_statistical_description(constraints,\
         constraints = constraints_d
         keys = constraints.keys()
 
-    final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value = instance_opt(constraints,
+    final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value = _opt(constraints,
             MODEL_PARAMS,test_key,model_value,MU,NGEN,diversity,full_test_list=keys,use_streamlit=False)
     temp = final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value
     opt_pickle =  opt, obs_preds, chi_sqr_opt, p_value
@@ -976,10 +829,10 @@ def full_statistical_description(constraints,\
 
 
 
-def inject_model_soma(dtc:Any,
+def inject_model_soma(dtc:DataTC,
     figname=None,
     solve_for_current=None,
-    Boolean:fixed=False) -> Tuple[Any,Any,dict,Any,Any]:
+    fixed:bool=False) -> Tuple[Any,Any,dict,Any,Any]:
     from neuronunit.tests.target_spike_current import SpikeCountSearch
     '''
     -- args: dtc
@@ -1040,16 +893,12 @@ def inject_model_soma(dtc:Any,
     dtc.vmrh = None
     dtc.vmrh = model.get_membrane_potential()
     del model
-
-
-
     model = dtc.dtc_to_model()
     ########
     # A thing to note
     # rheobase = 300 * pq.pA
     # A thing to note
     ########
-
     if hasattr(dtc,'current_spike_number_search'):
         from neuronunit.tests import SpikeCountSearch
         observation_spike_count={}
@@ -1099,26 +948,14 @@ def inject_model_soma(dtc:Any,
         return [vm30,vm15,params,None,dtc]
 
 
-def efel_evaluation(dtc,thirty=False) -> Any:
+def efel_evaluation(dtc:DataTC,specific_filter_list:List=None) -> DataTC:
     '''
     -- Synopsis: evaluate efel feature extraction criteria against on
     reduced cell models and probably efel data.
     '''
     if hasattr(dtc,'solve_for_current'):
         current = dtc.solve_for_current
-    else:
-        if type(dtc.rheobase) is type(dict()):
-            rheobase = dtc.rheobase['value']
-        else:
-            rheobase = dtc.rheobase
-        if not thirty:
-            current = 1.5*float(rheobase)
-        else:
-            current = 3.0*float(rheobase)
-    if not thirty:
-        vm_used = dtc.vm_soma
-    else:
-        vm_used = dtc.vm30
+    vm_used = dtc.vm_soma
     try:
         efel.reset()
     except:
@@ -1142,25 +979,25 @@ def efel_evaluation(dtc,thirty=False) -> Any:
             trace3['V'] = vm_used_mag
         else:
             pass
-
-        specific_filter_list = [
-                    'burst_ISI_indices',
-                    'burst_mean_freq',
-                    'burst_number',
-                    'single_burst_ratio',
-                    'ISI_log_slope',
-                    'mean_frequency',
-                    'adaptation_index2',
-                    'first_isi',
-                    'ISI_CV',
-                    'median_isi',
-                    'Spikecount',
-                    'all_ISI_values',
-                    'ISI_values',
-                    'time_to_first_spike',
-                    'time_to_last_spike',
-                    'time_to_second_spike',
-                    'Spikecount']
+        if specific_filter_list is None:
+            specific_filter_list = [
+                        'burst_ISI_indices',
+                        'burst_mean_freq',
+                        'burst_number',
+                        'single_burst_ratio',
+                        'ISI_log_slope',
+                        'mean_frequency',
+                        'adaptation_index2',
+                        'first_isi',
+                        'ISI_CV',
+                        'median_isi',
+                        'Spikecount',
+                        'all_ISI_values',
+                        'ISI_values',
+                        'time_to_first_spike',
+                        'time_to_last_spike',
+                        'time_to_second_spike',
+                        'Spikecount']
         results = efel.getMeanFeatureValues([trace3],specific_filter_list,raise_warnings=False)
         if "MAT" not in dtc.backend:
             thresh_cross = threshold_detection(vm_used,0*pq.mV)
@@ -1172,20 +1009,21 @@ def efel_evaluation(dtc,thirty=False) -> Any:
                 for index,tc in enumerate(dtc.spikes):
                     results[0]['spike_'+str(index)]=float(tc)
         nans = {k:v for k,v in results[0].items() if type(v) is type(None)}
-        if thirty:
-            dtc.efel_30 = None
-            dtc.efel_30 = results
-        else:
-            dtc.efel_15 = None
-            dtc.efel_15 = results
+        dtc.efel_15 = None
+        dtc.efel_15 = results
         efel.reset()
     return dtc
 
 
-def inject_and_plot_model(pre_model,figname=None,plotly=True, verbose=False):
+def inject_and_plot_model(pre_model:DataTC,
+                          figname=None,
+                          plotly=True,
+                          verbose=False) -> Union[Any,Any,Any]:
     '''
-     get rheobase injection value
-     get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    -- Synopsis: produce rheobase injection value
+    produce an object of class sciunit Runnable Model
+    with known attributes
+    and known rheobase current injection value.
     '''
     pre_model = dtc_to_rheo(pre_model)
     model = pre_model.dtc_to_model()
@@ -1199,7 +1037,7 @@ def inject_and_plot_model(pre_model,figname=None,plotly=True, verbose=False):
         if vm is not None:
             print(vm[-1],vm[-1]<0*pq.mV)
     if vm is None:
-        return None,None,None
+        return [None,None,None]
     if not plotly:
         plt.clf()
         plt.figure()
@@ -1220,11 +1058,11 @@ def inject_and_plot_model(pre_model,figname=None,plotly=True, verbose=False):
         if figname is not None:
             fig.write_image(str(figname)+str('.png'))
         else:
-            return vm,fig
-    return vm,plt,pre_model
+            return vm,fig,pre_model
+    return [vm,plt,pre_model]
 
-
-def switch_logic(xtests):
+#from sciunit.tests import base
+def switch_logic(xtests): #->
     try:
         aTSD = TSD()
     except:
@@ -1234,8 +1072,8 @@ def switch_logic(xtests):
 
     if type(xtests) is type(aTSD):
         xtests = list(xtests.values())
-    if type(xtests) is type(list()):
-        pass
+    #if type(xtests) is type(list()):
+    #    pass
     for t in xtests:
         if str('FITest') == t.name:
             t.active = True
@@ -1281,7 +1119,7 @@ def active_values(keyed,rheobase,square = None):
 
 
 
-def passive_values(keyed):
+def passive_values(keyed:dict={})->dict:
     PASSIVE_DURATION = 500.0*pq.ms
     PASSIVE_DELAY = 200.0*pq.ms
     keyed['injected_square_current'] = {}
@@ -1290,7 +1128,7 @@ def passive_values(keyed):
     keyed['injected_square_current']['amplitude'] = -10*pq.pA
     return keyed
 
-def neutral_values(keyed):
+def neutral_values(keyed:dict={})->dict:
     PASSIVE_DURATION = 500.0*pq.ms
     PASSIVE_DELAY = 200.0*pq.ms
     keyed['injected_square_current'] = {}
