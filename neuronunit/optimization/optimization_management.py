@@ -100,81 +100,6 @@ try:
 except:
     warnings.warn("SKLearn library not available, consider installing")
 
-'''
-def set_up_obj_tests(model_type:Text="")-> Any:
-    """
-    Args:
-        model_type (str): A string that selects which model type to create tests for.
-    Returns:
-        Any: An Optimization Management object.
-    """
-    with open('processed_multicellular_constraints.p','rb') as f: test_frame = pickle.load(f)
-    stds = {}
-    for k,v in TSD(test_frame['Neocortex pyramidal cell layer 5-6']).items():
-        temp = TSD(test_frame['Neocortex pyramidal cell layer 5-6'])[k]
-        stds[k] = temp.observation['std']
-    cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
-    cloned_tests = TSD(cloned_tests)
-    OM = jrt(cloned_tests,model_type,protocol={'elephant':True,'allen':False})
-    return OM
-def test_all_objective_test(free_parameters,
-                            model_type="IZHI",
-                            protocol=None,
-                            tract=True)-> Any:
-    """
-    Args:
-        Free paramters (dict): model parameters, a dictionary of tuples,
-        tuple element one is the bottom parameter boundary, tuple parameter 2 is the upper parameter boundary.
-        model_type: A string that selects which model type to create tests for.
-    Returns:
-        Any: An Optimization Management object.
-    """
-    results = {}
-    tests = {}
-    OM = set_up_obj_tests(model_type)
-    if tract == False:
-        test_keys = ["RheobaseTest","TimeConstantTest","RestingPotentialTest",
-        "InputResistanceTest","CapacitanceTest","InjectedCurrentAPWidthTest",
-        "InjectedCurrentAPAmplitudeTest","InjectedCurrentAPThresholdTest"]
-    else:
-        test_keys = ["RheobaseTest","TimeConstantTest","RestingPotentialTest",
-        "InputResistanceTest","CapacitanceTest"]
-    simulated_data_tests, OM, target = OM.make_sim_data_tests(
-        model_type,
-        free_parameters=free_parameters,
-        test_key=test_keys,
-        protocol=protocol
-        )
-    stds = {}
-    for k,v in simulated_data_tests.items():
-        keyed = which_key(simulated_data_tests[k].observation)
-        if k == str('RheobaseTest'):
-            mean = simulated_data_tests[k].observation[keyed]
-            std = simulated_data_tests[k].observation['std']
-            x = np.abs(std/mean)
-        if k == str('TimeConstantTest') or k == str('CapacitanceTest') or k==str('InjectedCurrentAPWidthTest'):
-            mean = simulated_data_tests[k].observation[keyed]
-            simulated_data_tests[k].observation['std'] = np.abs(mean)*2.0
-        elif k == str('InjectedCurrentAPThresholdTest') or k == str('InjectedCurrentAPAmplitudeTest'):
-            mean = simulated_data_tests[k].observation[keyed]
-            simulated_data_tests[k].observation['std'] = np.abs(mean)*2.0
-        stds[k] = (x,mean,std)
-    target.tests = simulated_data_tests
-    model = target.dtc_to_model()
-    for t in simulated_data_tests.values():
-        try:
-            score0 = t.judge(target.dtc_to_model())
-        except:
-            pass
-        score1 = target.tests[t.name].judge(target.dtc_to_model())
-        assert float(score0.score)==0.0
-        assert float(score1.score)==0.0
-    tests = TSD(copy.copy(simulated_data_tests))
-    check_tests = copy.copy(tests)
-    return tests, OM, target
-'''
-
-
 class TSD(dict):
     """
     -- Synopsis:
@@ -196,15 +121,6 @@ class TSD(dict):
             tests = OrderedDict({t.name: t for t in tests})
         super(TSD, self).__init__()
         self.update(tests)
-        # if 'allen_hack' in self.keys():
-        #   self.three_step = allen_hack
-        #   self.pop('allen_hack',None)
-
-        # if 'name' in self.keys():
-        # self.cell_name = tests['name']
-        # self.pop('name',None)
-        # else:
-        #   self.cell_name = 'simulated data'
 
     def display(self):
         from IPython.display import display
@@ -228,8 +144,7 @@ class TSD(dict):
         del self.DO
         return {k: v for k, v in self.items()}
 
-    """
-    PROBABLY REWRITE THIS
+
     def optimize(self,**kwargs):
         import shelve
         defaults = {'param_edges':None,
@@ -287,6 +202,9 @@ class TSD(dict):
             if kwargs['hold_constant'] is None:
                 if len(free_parameters) < len(param_edges):
                     pass
+            '''
+            PROBABLY REWRITE THIS
+
             self.DO = make_ga_DO(param_edges, \
                                 kwargs['NGEN'], \
                                 self, \
@@ -297,13 +215,13 @@ class TSD(dict):
                                 seed_pop = kwargs['seed_pop'], \
                                 hc=kwargs['hold_constant']
                                 )
+            '''
             self.MU = self.DO.MU = kwargs['MU']
             self.NGEN = self.DO.NGEN = kwargs['NGEN']
 
             ga_out = self.DO.run(NGEN = self.DO.NGEN)
             self.backend = kwargs['backend']
             return ga_out
-        """
 
 
 import numpy, time
@@ -378,53 +296,10 @@ def write_opt_to_nml(path, param_dict) -> None:
     return
 
 
-"""
-def ugly_score_wrangler(model,objectives2,to_latex_string=False):
-    strict_scores = {}
-    pd.set_option('display.max_rows', None)
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.width', None)
-    pd.set_option('display.max_colwidth', None)
-    for i in objectives2:
-        test = i.features[0].test
-        try:
-            test.observation['value'] = np.abs(float(test.observation['mean']))*pq.dimensionless
-            test.observation['n'] = 1
-        except:
-            temp = {}
-            temp['value'] = np.abs(test.observation['value'])*pq.dimensionless
-            temp['n'] = 1
-            test.observation = temp
 
-        try:
-            test.prediction['value'] = np.abs(float(test.prediction))*pq.dimensionless
-        except:
-            temp = {}
-            try:
-                temp['value'] = np.abs(float(test.prediction))*pq.dimensionless#*pq.dimensionless
-            except:
-                try:
-                    temp['value'] = np.abs(float(test.prediction['mean']))*pq.dimensionless#*pq.dimensionless
-                except:
-                    temp['value'] = np.abs(float(test.prediction['value']))*pq.dimensionless#*pq.dimensionless
-            temp['n'] = 1
-            test.prediction = temp
-
-        test.score_type = RatioScore
-        for k,v in test.observation.items():
-            test.observation[k] = np.abs(test.observation[k]) #* test.observation[k]#.units
-
-        for k,v in test.prediction.items():
-            test.prediction[k] = np.abs(test.prediction[k])
-        re_score = test.compute_score(test.observation,test.prediction)
-        strict_scores[test.name] = re_score
-    df = pd.DataFrame([strict_scores])
-    df = df.T
-    return df
-"""
-
-
-def get_rh(dtc, rtest_class, bind_vm=False) -> Any:
+def get_rh(DataTC:dtc,
+            RheobaseTest:rtest_class,
+            bool:bind_vm=False) -> DataTC:
     """
     --args:
         :param object dtc:
@@ -453,7 +328,7 @@ def get_rh(dtc, rtest_class, bind_vm=False) -> Any:
     return dtc
 
 
-def get_new_rtest(dtc):
+def get_new_rtest(DataTC:dtc)->RheobaseTest:
     place_holder = {"mean": 10 * pq.pA}
     f = RheobaseTest
     rtest = f(observation=place_holder, name="RheobaseTest")
@@ -461,7 +336,7 @@ def get_new_rtest(dtc):
     return rtest
 
 
-def get_rtest(dtc):
+def get_rtest(DataTC:dtc)->RheobaseTest:
     if not hasattr(dtc, "tests"):
         rtest = get_new_rtest(dtc)
     else:
@@ -1042,19 +917,20 @@ def inject_model_soma(
         return [vm30, vm15, params, None, dtc]
 
 
-def efel_evaluation(instance_obj: Any, specific_filter_list: List = None) -> Any:
+def efel_evaluation(instance_obj: Any, specific_filter_list: List = None,current:float=None) -> Any:
     """
     -- Synopsis: evaluate efel feature extraction criteria against on
     reduced cell models and probably efel data.
     """
-    if hasattr(instance_obj, "solve_for_current"):
-        current = instance_obj.solve_for_current
     vm_used = instance_obj.vm_soma
     try:
         efel.reset()
     except:
         pass
     efel.setThreshold(0)
+    if current is None:
+        if hasattr(instance_obj, "solve_for_current"):
+            current = instance_obj.solve_for_current
     trace3 = {
         "T": [float(t) * 1000.0 for t in vm_used.times],
         "V": [float(v) for v in vm_used.magnitude],

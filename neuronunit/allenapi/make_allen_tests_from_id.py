@@ -178,13 +178,10 @@ def get_model_parts(data_set, sweep_numbers, specimen_id):
 
 
 def get_model_parts_sweep_from_spk_cnt(spk_cnt, data_set, sweep_numbers, specimen_id):
-    # import pdb
-    # pdb.set_trace()
     sweep_numbers = sweep_numbers["Square - 2s Suprathreshold"]
     rheobase = -1
     above_threshold_sn = []
 
-    # this_cnt_scheme = 0
     for sn in sweep_numbers:
         spike_times = data_set.get_spike_times(sn)
         if len(spike_times) >= spk_cnt:
@@ -194,14 +191,7 @@ def get_model_parts_sweep_from_spk_cnt(spk_cnt, data_set, sweep_numbers, specime
             reponse = sweep_data["response"]
             if len(spike_times):
                 thresh_ = len(np.where(reponse > 0))
-            """
-            if (len(spike_times) and np.max(reponse)<0) or len(spike_times) != thresh_:
-                reponse = [v+np.mean([0,np.abs(np.max(reponse))]) for v in reponse]
-                if np.max(reponse)<0:
-                    reponse = [v+np.mean([0,np.abs(np.max(reponse))]) for v in reponse]
-                assert np.max(reponse)>0
-                assert np.min(reponse)<0
-            """
+
 
             sampling_rate = sweep_data["sampling_rate"]
             vmm = AnalogSignal(
@@ -212,13 +202,10 @@ def get_model_parts_sweep_from_spk_cnt(spk_cnt, data_set, sweep_numbers, specime
             vmm = vmm[0 : int(len(vmm) / 2.1)]
             vmm.sn = None
             vmm.sn = sn
-            # print(vmm)
 
             return vmm, stimulus, sn, spike_times
     return None, None, None, None
 
-
-# from elephant.signal_processing import threshold_detection
 
 
 def get_model_parts_sweep_from_number(sn, data_set, sweep_numbers, specimen_id):
@@ -247,7 +234,7 @@ def make_suite_known_sweep_from_static_models(vm_soma, stimulus, specimen_id):
     sm.backend = "static_model"
     sm.vm_soma = vm_soma
     sm.rheobase = np.max(stimulus)
-    sm = efel_evaluation(sm)
+    sm = efel_evaluation(sm,current=np.max(stimulus))
     sm = rekeyed(sm)
     useable = False
     sm.vmrh = vm_soma
@@ -298,9 +285,8 @@ def make_suite_from_static_models(vm_soma, vm30, rheobase, currents, vmrh, speci
     sm.rheobase = rheobase
     sm.vm_soma = vm_soma
 
-    sm = efel_evaluation(sm)  # ,thirty=False)
+    sm = efel_evaluation(sm)
 
-    # sm = efel_evaluation(sm,thirty=True)
     sm = rekeyed(sm)
     useable = False
     sm.vmrh = vmrh
@@ -309,7 +295,6 @@ def make_suite_from_static_models(vm_soma, vm30, rheobase, currents, vmrh, speci
     ##
     # Not here deliberate misleading naming
     ##
-    # import pdb; pdb.set_trace()
     if sm.efel_15 is not None:
         for k, v in sm.efel_15[0].items():
             try:
@@ -320,29 +305,7 @@ def make_suite_from_static_models(vm_soma, vm30, rheobase, currents, vmrh, speci
                 allen_tests.append(at)
             except:
                 pass
-            # if k in simple_yes_list:
-            #    useable = True
-            # else:
-            #    useable = False
-    ##
-    # Not here deliberate misleading naming
-    ##
-    """
-    if sm.efel_30 is not None:
-        for k,v in sm.efel_30[0].items():
-            try:
-                at = AllenTest(name=str(k)+'_3.0x')
-                at.set_observation(v)
-                at = wrangle_tests(at)
 
-                allen_tests.append(at)
-            except:
-                pass
-            if k in simple_yes_list:
-                useable = True
-            else:
-                useable = False
-    """
     suite = TestSuite(allen_tests, name=str(specimen_id))
     suite.traces = None
     suite.traces = {}
