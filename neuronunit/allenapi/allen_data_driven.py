@@ -325,7 +325,7 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
     _, _, _, target = inject_model_soma(
         target, solve_for_current=target_current["value"]
     )
-    _, _, _, opt = inject_model_soma(opt, solve_for_current=target_current["value"])
+    _, _, _, _, opt = inject_model_soma(opt, solve_for_current=target_current["value"])
 
     return opt, target,scores,obs_preds,df
 def make_allen_hard_coded_complete():
