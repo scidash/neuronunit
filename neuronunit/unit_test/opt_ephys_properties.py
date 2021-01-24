@@ -92,7 +92,7 @@ class testOptimizationEphysCase(unittest.TestCase):
     Rick, some of these bellow are unit tests
     that cannot pass without changes to sciunit complete
     '''
-    @skip_incapable
+    @unittest.skip
     def test_neuro_electro_adexp_opt_ca1(self):
         self.MU = 35
         self.NGEN = 10
@@ -107,7 +107,7 @@ class testOptimizationEphysCase(unittest.TestCase):
             score_type=ZScore
             )
 
-    @skip_incapable
+    @unittest.skip
     def test_neuro_electro_izhi_opt_pyr(self):
         self.MU = 100
         self.NGEN = 1
