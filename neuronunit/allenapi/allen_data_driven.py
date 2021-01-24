@@ -234,7 +234,6 @@ def opt_setup_two(
     template_model.seeded_current = target_current["value"]
     template_model.spk_count = spk_count
     sweep_protocols = []
-    #for protocol_name, amplitude in [("step1", 0.05)]:
     protocol = ephys.protocols.NeuronUnitAllenStepProtocol('onestep', [None], [None])
     sweep_protocols.append(protocol)
     onestep_protocol = ephys.protocols.SequenceProtocol(

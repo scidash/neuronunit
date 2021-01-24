@@ -481,10 +481,9 @@ def make_evaluator(
         objectives.append(objective)
 
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
-    # cell_evaluator.SA = ScoreArray(nu_tests, objectives)
 
     sweep_protocols = []
-    protocol = ephys.protocols.SweepProtocol("step1", [None], [None])
+    protocol = ephys.protocols.NeuronUnitAllenStepProtocol("step1", [None], [None])
     sweep_protocols.append(protocol)
     onestep_protocol = ephys.protocols.SequenceProtocol(
         "onestep", protocols=sweep_protocols
@@ -543,7 +542,7 @@ def _opt_(
         mutpb=mut,
         cxpb=cxp,
         NEURONUNIT=True,
-        ELITISM=True        
+        ELITISM=True
     )
 
     final_pop, hall_of_fame, logs, hist = optimization.run(max_ngen=NGEN)
