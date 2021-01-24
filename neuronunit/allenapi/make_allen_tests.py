@@ -4,7 +4,7 @@ import numpy as np
 from allensdk.core.cell_types_cache import CellTypesCache
 from neuronunit.optimization.data_transport_container import DataTC
 
-# from neuronunit.optimization.optimization_management import allen_wave_predictions, three_step_protocol
+from neuronunit.optimization.optimization_management import multi_spiking_feature_extraction
 from sciunit.scores import RelativeDifferenceScore
 
 
@@ -19,16 +19,8 @@ class AllenTest(VmTest):
         self.name = name
         self.score_type = RelativeDifferenceScore
         self.observation = observation
-        # self.set_observation(observation)
-
         self.prediction = prediction
 
-        # print(self._observation)
-
-    # required_capabilities = (scap.Runnable, ncap.ProducesMembranePotential,)
-
-    # units = pass #
-    # ephysprop_name = ''
     aliases = ""
 
     def generate_prediction(self, model=None):
@@ -38,7 +30,7 @@ class AllenTest(VmTest):
             dtc.attrs = model.attrs
             dtc.rheobase = model.rheobase
             dtc.tests = [self]
-            dtc = three_step_protocol(dtc)
+            dtc = multi_spiking_feature_extraction(dtc)
             dtc, ephys0 = allen_wave_predictions(dtc, thirty=True)
             dtc, ephys1 = allen_wave_predictions(dtc, thirty=False)
             if self.name in ephys0.keys():

@@ -4,7 +4,6 @@ def plot_as_normal(dtc):
     import streamlit as st
     collect_z_offset = []
     for i,t in enumerate(dtc.tests):
-        #ax = axes.flat[i]
         t.score_type = ZScore
         model = dtc.dtc_to_model()
         score = t.judge(model)
@@ -140,8 +139,29 @@ def zplot(x_point,y_point,title,area=0.68, two_tailed=True, align_right=False, m
     plt.title(title)
     plt.show()
 
+try:
+    import plotly.offline as py
+except:
+    warnings.warn("plotly")
+try:
+    import plotly
+
+    plotly.io.orca.config.executable = "/usr/bin/orca"
+except:
+    print("silently fail on plotly")
+try:
+    import seaborn as sns
+except:
+    warnings.warn("Seaborne plotting sub library not available, consider installing")
 
 def check_bin_vm_soma(target,opt):
+    import matplotlib
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import plotly.graph_objects as go
+    import quantities as qt
+    sns.set(context="paper", font="monospace")
+
     plt.plot(target.vm_soma.times,target.vm_soma.magnitude,label='Allen Experiment')
     plt.plot(opt.vm_soma.times,opt.vm_soma.magnitude,label='Optimized Model')
     signal = target.vm_soma

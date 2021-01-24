@@ -8,7 +8,7 @@ from allensdk.core.cell_types_cache import CellTypesCache
 from allensdk.ephys.extract_cell_features import extract_cell_features
 from collections import defaultdict
 from allensdk.core.nwb_data_set import NwbDataSet
-from neuronunit.optimization.optimization_management import efel_evaluation, rekeyed
+from neuronunit.optimization.optimization_management import efel_evaluation
 import numpy as np
 from neuronunit.tests.make_allen_tests import AllenTest
 from sciunit import TestSuite
@@ -17,7 +17,7 @@ from neuronunit.models import StaticModel
 
 from neuronunit.tests.target_spike_current import SpikeCountSearch
 from neuronunit.optimization.data_transport_container import DataTC
-from neuronunit.optimization.optimization_management import dtc_to_rheo, rekeyed
+from neuronunit.optimization.optimization_management import dtc_to_rheo#, rekeyed
 from neo.core import AnalogSignal
 import quantities as qt
 
@@ -144,17 +144,12 @@ def get_model_parts(data_set, sweep_numbers, specimen_id):
                 units=qt.mV,
             )
             vmm = vmm[0 : int(len(vmm) / 2.1)]
-            # vmm.this_cnt_scheme = this_cnt_scheme
-            # this_cnt_scheme+1
             above_threshold_sn.append((np.max(stimulus), sn, vmm))
-            # cprint(len(spike_times))
     if rheobase == -1:
         rheobase = above_threshold_sn[0][0]
         vmrh = above_threshold_sn[0][
             2
-        ]  # AnalogSignal([v*1000 for v in sweep_data['response']],sampling_rate=sampling_rate*qt.Hz,units=qt.mV)
-        # vmrh = #vmrh[0:int(len(vmrh)/2.1)]
-        print(len(spike_times))
+        ]
     myNumber = 3.0 * rheobase
     currents_ = [t[0] for t in above_threshold_sn]
     indexvm30 = closest(currents_, myNumber)
@@ -229,20 +224,19 @@ def get_model_parts_sweep_from_number(sn, data_set, sweep_numbers, specimen_id):
     return vmm, stimulus, sn, spike_times
 
 
-def make_suite_known_sweep_from_static_models(vm_soma, stimulus, specimen_id):
+def make_suite_known_sweep_from_static_models(vm_soma, stimulus, specimen_id,efel_filter_list=None):
     sm = StaticModel(vm=vm_soma)
     sm.backend = "static_model"
     sm.vm_soma = vm_soma
     sm.rheobase = np.max(stimulus)
-    sm = efel_evaluation(sm,current=np.max(stimulus))
-    sm = rekeyed(sm)
+    sm = efel_evaluation(sm,current=np.max(stimulus),efel_filter_list=efel_filter_list)
     useable = False
     sm.vmrh = vm_soma
     allen_tests = []
-    if sm.efel_15 is not None:
-        for k, v in sm.efel_15[0].items():
+    if sm.efel is not None:
+        for k, v in sm.efel.items():
             try:
-                at = AllenTest(name=str(k) + "_1.5x")
+                at = AllenTest(name=str(k))
                 at.set_observation(v)
                 at = wrangle_tests(at)
 
@@ -295,13 +289,12 @@ def make_suite_from_static_models(vm_soma, vm30, rheobase, currents, vmrh, speci
     ##
     # Not here deliberate misleading naming
     ##
-    if sm.efel_15 is not None:
-        for k, v in sm.efel_15[0].items():
+    if sm.efel is not None:
+        for k, v in sm.efel.items():
             try:
-                at = AllenTest(name=str(k) + "_1.5x")
+                at = AllenTest(name=str(k))
                 at.set_observation(v)
                 at = wrangle_tests(at)
-
                 allen_tests.append(at)
             except:
                 pass
@@ -314,9 +307,7 @@ def make_suite_from_static_models(vm_soma, vm30, rheobase, currents, vmrh, speci
     ##
     # Not here deliberate misleading naming
     ##
-
     suite.traces["vm_soma"] = sm.vm_soma
-    # suite.traces['vm30'] = sm.vm30
     suite.model = None
     suite.useable = None
 

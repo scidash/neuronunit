@@ -7,11 +7,19 @@ from sciunit.scores.collections import ScoreArray
 import sciunit
 import pandas as pd
 from jithub.models import model_classes
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
 
 
 class DataTC(object):
-    def model_default(self):
+    """
+    --Synopsis: Data Transport Container
+        This Object class serves as a data type for storing rheobase search
+        attributes and apriori model parameters,
+        with the distinction that unlike the LEMS model this class
+        can be cheaply transported across HOSTS/CPUs
+    """
 
+    def model_default(self)->None:
         if self.backend is not None:
             if self.attrs is None:
                 from neuronunit.optimization.model_parameters import (
@@ -37,26 +45,20 @@ class DataTC(object):
                 model = self.dtc_to_model()
                 self.attrs = model._backend.default_attrs
                 del model
+            return None
 
-    """
-    Data Transport Container
-
-    This Object class serves as a data type for storing rheobase search
-    attributes and apriori model parameters,
-    with the distinction that unlike the LEMS model this class
-    can be cheaply transported across HOSTS/CPUs
-    """
 
     def __init__(self, attrs=None, backend=None, _backend=None):
-        self.lookup = {}
         self.rheobase = None
-        self.previous = 0
-        self.run_number = 0
         self.attrs = attrs
-        self.boolean = False
         self.initiated = False
         self.backend = backend
         self._backend = _backend
+        self.lookup = {}
+        #self.previous = 0
+        #self.run_number = 0
+        #self.boolean = False
+
         if self.backend is not None:
             if (
                 str("MAT") in self.backend
@@ -72,9 +74,8 @@ class DataTC(object):
         else:
             self.attrs = attrs
 
-    def to_bpo_param(self, attrs):
+    def to_bpo_param(self, attrs:dict={})->dict:
         from bluepyopt.parameters import Parameter
-
         lop = {}
         for k, v in attrs.items():
             p = Parameter(name=k, bounds=v, frozen=False)
@@ -82,71 +83,12 @@ class DataTC(object):
         self.param = lop
         return lop
 
-    def self_evaluate(self, tests=None):
-        from neuronunit.optimization import optimization_management as om_
-
-        if tests is not None:
-            self.tests = tests
-
-        OM = self.dtc_to_opt_man()
-        self = om_.dtc_to_rheo(self)
-        d = OM.format_test(self)
-        model = self.dtc_to_model()
-        scores_ = []
-        for t in self.tests:
-            if hasattr(t, "allen"):
-                continue
-            if "RheobaseTest" in t.name:
-                t.score_type = sciunit.scores.ZScore
-            try:
-                score_gene = t.judge(model)
-            except:
-                score_gene = None
-                lns = 100
-
-            if score_gene is not None:
-                if not isinstance(
-                    type(score_gene), sciunit.scores.InsufficientDataScore
-                ):
-                    if not isinstance(type(score_gene.log_norm_score), type(None)):
-                        try:
-
-                            lns = np.abs(score_gene.log_norm_score)
-                        except:
-                            if score_gene.raw is not None:
-                                lns = np.abs(float(score_gene.raw))
-                            else:
-                                lns = 100.0
-                    else:
-                        try:
-                            lns = np.abs(float(score_gene.raw))
-                        except:
-                            lns = 100
-                else:
-                    try:
-                        lns = np.abs(float(score_gene.raw))
-                    except:
-                        lns = 100
-            if lns == np.inf or lns == -np.inf:
-                lns = np.abs(float(score_gene.raw))
-            scores_.append(lns)
-        for i, s in enumerate(scores_):
-            if s == np.inf or s == -np.inf:
-                scores_[i] = 100  # np.abs(float(score_gene.raw))
-        self.scores_ = scores_
-
-        temp = [t for t in self.tests if not hasattr(t, "allen")]
-        self.SA = ScoreArray(temp, self.scores_)
-
-        return self
-
-    def make_pretty(self, tests):
+    def make_pretty(self, tests) -> pd.DataFrame:
         import pandas as pd
-
-        self.self_evaluate(tests=tests)
+        self.tests = tests
         self.obs_preds = pd.DataFrame(columns=["observations", "predictions"])
         holding_obs = {
-            t.name: t.observation["mean"] for t in self.tests if not hasattr(t, "allen")
+            t.name: t.observation["mean"] for t in self.tests
         }
         grab_keys = []
         for t in self.tests:
@@ -195,14 +137,23 @@ class DataTC(object):
         temp_obs = pd.DataFrame([holding_obs], index=["observations"])
         temp_preds = pd.DataFrame([holding_preds], index=["predictions"])
         # like a score array but nicer reporting of test name instead of test data type.
-        not_SA = {
-            t.name: np.round(score, 2) for t, score in zip(self.tests, self.scores_)
-        }
-        temp_scores = pd.DataFrame([not_SA], index=["Z-Scores"])
-        self.obs_preds = pd.concat([temp_obs, temp_preds, temp_scores])
+        try:
+            scores_ = []
+            model = self.dtc_to_model()
+            for t in self.tests:
+                scores_.append(t.judge(model,prediction=t.prediction))
+
+            not_SA = {
+                t.name: np.round(score.raw, 2) for t, score in zip(self.tests, scores_)
+            }
+            temp_scores = pd.DataFrame([not_SA], index=["Z-Scores"])
+            self.obs_preds = pd.concat([temp_obs, temp_preds, temp_scores])
+        except:
+            self.obs_preds = pd.concat([temp_obs, temp_preds])#, temp_scores])
         self.obs_preds = self.obs_preds.T
         return self.obs_preds
 
+    '''
     def dtc_to_opt_man(self):
         from neuronunit.optimization.optimization_management import OptMan
         from collections import OrderedDict
@@ -219,7 +170,7 @@ class DataTC(object):
         OM = self.dtc_to_opt_man()
         self = OM.get_agreement(self)
         return self
-
+    '''
     def add_constant(self):
         if self.constants is not None:
             self.attrs.update(self.constants)

@@ -119,17 +119,10 @@ class SpikeCountSearch(VmTest):
             ampl = float(dtc.ampl)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 uc = {'amplitude':ampl*pq.pA,'duration':DURATION,'delay':DELAY}
-                dtc.run_number += 1
-                #model.set_attrs(**dtc.attrs)
-                #if model.backend is str("JIT_MATBackend"):
-                #    vm = model._backend.inject_square_current(**uc)
-                #    n_spikes = len(model._backend.spikes)
-                    #print(n_spikes,model._backend.attrs,'gets here?')
 
                 if str("JIT_") in model.backend:
                     _ = model._backend.inject_square_current(**uc)
                     n_spikes = model._backend.get_spike_count()
-                    #print(n_spikes,ampl)#,model._backend.attrs['cm'])
 
                 if float(ampl) < -10.0:
                     dtc.rheobase = {}

@@ -69,7 +69,7 @@ def opt_setup(
     attrs = {k: np.mean(v) for k, v in MODEL_PARAMS[model_type].items()}
     dtc = DataTC(backend=model_type, attrs=attrs)
     for t in nu_tests:
-        if t.name == "Spikecount_1.5x":
+        if t.name == "Spikecount":
             spk_count = float(t.observation["mean"])
             break
     observation_range = {}
@@ -78,7 +78,6 @@ def opt_setup(
     template_model.allen = None
     template_model.allen = True
     template_model.NU = True
-
     if fixed_current:
         uc = {
             "amplitude": fixed_current,
@@ -134,7 +133,7 @@ class NUFeatureAllenMultiSpike(object):
         self.test.observation["mean"] = np.mean(self.test.observation["mean"])
         self.test.set_prediction(np.mean(features[self.test.name]))
 
-        if "Spikecount_1.5x" == feature_name:
+        if "Spikecount" == feature_name:
             delta = np.abs(
                 features[self.test.name] - np.mean(self.test.observation["mean"])
             )
@@ -187,7 +186,7 @@ def opt_setup_two(
     objectives = []
     spike_obs = []
     for tt in nu_tests:
-        if "Spikecount_1.5x" == tt.name:
+        if "Spikecount" == tt.name:
             spike_obs.append(tt.observation)
     spike_obs = sorted(spike_obs, key=lambda k: k["mean"], reverse=True)
     for cnt, tt in enumerate(nu_tests):
@@ -210,7 +209,7 @@ def opt_setup_two(
     assert cell_evaluator.cell_model is not None
     return cell_evaluator, template_model
 
-
+'''
 def multi_layered(MU, NGEN, mapping_funct, cell_evaluator2):
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator2,
@@ -223,7 +222,7 @@ def multi_layered(MU, NGEN, mapping_funct, cell_evaluator2):
     )
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
     return final_pop, hall_of_fame, logs, hist
-
+'''
 
 def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
 

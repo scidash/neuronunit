@@ -9,21 +9,20 @@ import warnings
 SILENT = True
 if SILENT:
     warnings.filterwarnings("ignore")
-import matplotlib
 
+import numpy, time
+try:
+    import efel
+except:
+    warnings.warn("Blue brain feature extraction not available, consider installing")
 
-import cython
-import matplotlib.pyplot as plt
 import numpy as np
-
+import cython
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 from collections import OrderedDict
 from collections.abc import Iterable
-
 import math
-
-# import quantities as pq
 import numpy
 import deap
 from deap import creator
@@ -32,26 +31,24 @@ import array
 import copy
 from frozendict import frozendict
 from itertools import repeat
-import seaborn as sns
-
-sns.set(context="paper", font="monospace")
 import random
-
-# import pandas as pd
-
 import bluepyopt as bpop
 import bluepyopt.ephys as ephys
 from bluepyopt.parameters import Parameter
 import quantities as pq
-
 PASSIVE_DURATION = 500.0 * pq.ms
 PASSIVE_DELAY = 200.0 * pq.ms
-import plotly.graph_objects as go
 from elephant.spike_train_generation import threshold_detection
+
+import sciunit
+from sciunit import TestSuite
+from sciunit import scores
+from sciunit.scores import RelativeDifferenceScore
+
+from jithub.models import model_classes
 
 
 from neuronunit.optimization.data_transport_container import DataTC
-
 from neuronunit.tests.base import AMPL, DELAY, DURATION
 from neuronunit.tests.target_spike_current import (
     SpikeCountSearch,
@@ -59,46 +56,15 @@ from neuronunit.tests.target_spike_current import (
 )
 import neuronunit.capabilities.spike_functions as sf
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
-
 from neuronunit.tests.fi import RheobaseTest
 from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2widths
+from neuronunit.tests import VmTest
 
-from jithub.models import model_classes
-
-# import time
-
-
-from sciunit.scores.collections import ScoreArray
-import sciunit
-from sciunit import TestSuite
-from sciunit import scores
-from sciunit.scores import RelativeDifferenceScore
-
-
-try:
-    import plotly.offline as py
-except:
-    warnings.warn("plotly")
-try:
-    import plotly
-
-    plotly.io.orca.config.executable = "/usr/bin/orca"
-except:
-    print("silently fail on plotly")
-
-
-try:
-    import efel
-except:
-    warnings.warn("Blue brain feature extraction not available, consider installing")
-try:
-    import seaborn as sns
-except:
-    warnings.warn("Seaborne plotting sub library not available, consider installing")
-try:
-    from sklearn.cluster import KMeans
-except:
-    warnings.warn("SKLearn library not available, consider installing")
+#from sciunit.scores.collections import ScoreArray
+#try:
+#    from sklearn.cluster import KMeans
+#except:#
+#    warnings.warn("SKLearn library not available, consider installing")
 
 class TSD(dict):
     """
@@ -112,7 +78,7 @@ class TSD(dict):
         self.DO = None
         self.use_rheobase_score = use_rheobase_score
         self.backend = None
-        self.three_step = None
+        #self.three_step = None
         if type(tests) is TestSuite:
             tests = OrderedDict({t.name: t for t in tests.tests})
         if type(tests) is type(dict()):
@@ -224,7 +190,6 @@ class TSD(dict):
             return ga_out
 
 
-import numpy, time
 
 
 @cython.boundscheck(False)
@@ -309,19 +274,19 @@ def get_rh(dtc:DataTC,
      a rheobase test class instance,
      given unknown experimental observations.
     """
-    place_holder = {"mean": 10 * pq.pA}
+    place_holder = {"mean": None * pq.pA}
     backend_ = dtc.backend
     rtest = RheobaseTest(observation=place_holder, name="RheobaseTest")
     rtest.score_type = RelativeDifferenceScore
-    dtc.rheobase = None
+    #dtc.rheobase = None
     assert len(dtc.attrs)
     model = dtc.dtc_to_model()
     rtest.params["injected_square_current"] = {}
     rtest.params["injected_square_current"]["delay"] = DELAY
     rtest.params["injected_square_current"]["duration"] = DURATION
     dtc.rheobase = rtest.generate_prediction(model)["value"]
-    temp_vm = model.get_membrane_potential()
     if bind_vm:
+        temp_vm = model.get_membrane_potential()
         dtc.vmrh = temp_vm
     if np.isnan(np.min(temp_vm)):
         # rheobase exists but the waveform is nuts.
@@ -434,38 +399,42 @@ def jrt(use_tests,model_type,
 
 
 def train_length(dtc: DataTC) -> DataTC:
-    if not hasattr(dtc, "everything"):
-        dtc.everything = {}
-    vm = copy.copy(dtc.vm_soma)
+    if not hasattr(dtc, "efel"):
+        dtc.efel = [{}]
+    vm = dtc.vm_soma
     train_len = float(len(sf.get_spike_train(vm)))
-    dtc.everything["Spikecount_1.5x"] = copy.copy(train_len)
+    dtc.efel["Spikecount"] = train_len
     return dtc
 
 
-def three_step_protocol(dtc, solve_for_current=None):
+def multi_spiking_feature_extraction(dtc:DataTC,
+        solve_for_current:bool=None,
+        efel_filter_list:List=None)->DataTC:
     """
-    Rename this to multi spiking feature extraction
+    Perform multi spiking feature extraction
+    via EFEL because its fast
     """
     if solve_for_current is None:
         _, _, _, _, dtc = inject_model_soma(dtc)
         if dtc.vm_soma is None:
             return dtc
-        try:
-            dtc = efel_evaluation(dtc)
-        except:
-            dtc.vm_soma = None
+        dtc = efel_evaluation(dtc,efel_filter_list)
+        dtc.vm_soma = None
     else:
         _, _, _, dtc = inject_model_soma(dtc, solve_for_current=solve_for_current)
         if dtc.vm_soma is None:
             return dtc
-        dtc = efel_evaluation(dtc)
+        dtc = efel_evaluation(dtc,efel_filter_list)
+    if hasattr(dtc,'efel'):
+        if dtc.efel is not None:
+            dtc = train_length(dtc)
 
-    dtc = rekeyed(dtc)
-    if dtc.everything is not None:
-        dtc = train_length(dtc)
+    else:
+        dtc.efel = None
+
     return dtc
 
-
+'''
 def rekeyed(dtc: Any = object()) -> Any:
     rekey = {}
     if hasattr(dtc, "allen_30"):
@@ -485,7 +454,7 @@ def rekeyed(dtc: Any = object()) -> Any:
             rekey = None
     dtc.everything = rekey
     return dtc
-
+'''
 
 def constrain_ahp(vm_used: Any = object()) -> dict:
     efel.reset()
@@ -498,8 +467,8 @@ def constrain_ahp(vm_used: Any = object()) -> dict:
     DELAY = 100 * pq.ms
     trace3["stim_end"] = [float(DELAY) + float(DURATION)]
     trace3["stim_start"] = [float(DELAY)]
-    simple_yes_list = ["AHP_depth", "AHP_depth_abs", "AHP_depth_last"]
-    results = efel.getMeanFeatureValues([trace3], simple_yes_list, raise_warnings=False)
+    simple_ahp_constraint_list = ["AHP_depth", "AHP_depth_abs", "AHP_depth_last"]
+    results = efel.getMeanFeatureValues([trace3], simple_ahp_constraint_list, raise_warnings=False)
     return results
 
 
@@ -651,7 +620,7 @@ def get_binary_file_downloader_html(bin_file_path, file_label="File"):
     return href
 
 
-def _opt(
+def _opt_(
     constraints,
     PARAMS,
     test_key,
@@ -659,12 +628,11 @@ def _opt(
     MU,
     NGEN,
     diversity,
-    full_test_list=None,
     use_streamlit=False,
     score_type=RelativeDifferenceScore,
 ):
     """
-    used with streamlit
+    used with or without streamlit
     """
 
     if type(constraints) is not type(list()):
@@ -690,6 +658,22 @@ def _opt(
     best_ind_dict = cell_evaluator.param_dict(best_ind)
     model = cell_evaluator.cell_model
     cell_evaluator.param_dict(best_ind)
+    tests = constraints
+    obs_preds = []
+    scores = []
+    for t in tests:
+        scores.append(t.judge(model,prediction=t.prediction))
+        if 'mean' in t.observation.keys():
+            if 'mean' in t.prediction.keys():
+                obs_preds.append((t.name,t.observation['mean'],t.prediction['mean'],scores[-1]))
+            if 'value' in t.prediction.keys():
+                obs_preds.append((t.name,t.observation['mean'],t.prediction['value'],scores[-1]))
+        else:
+            obs_preds.append((t.name,t.observation,t.prediction,scores[-1]))
+
+    df = pd.DataFrame(obs_preds)
+
+
     model.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
@@ -697,10 +681,33 @@ def _opt(
     opt.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
+    df = opt.make_pretty(tests=tests)
     best_fit_val = best_ind.fitness.values
-    return final_pop, hall_of_fame, logs, hist, best_ind, best_fit_val, opt
+    return final_pop, hall_of_fame, logs, hist, best_ind, best_fit_val, opt,obs_preds,df
 
+def public_opt(
+    constraints,
+    PARAMS,
+    test_key,
+    model_value,
+    MU,
+    NGEN,
+    diversity,
+    score_type=RelativeDifferenceScore
+):
 
+    _,_,_,_,_,_,opt,obs_preds,df = _opt_(constraints=constraints,
+    PARAMS=PARAMS,
+    test_key=test_key,
+    model_value=model_value,
+    MU=MU,
+    NGEN=NGEN,
+    diversity=diversity,
+    score_type=score_type)
+
+    return opt,obs_preds,df
+
+'''
 def full_statistical_description(
     constraints,
     exp_cell,
@@ -710,7 +717,6 @@ def full_statistical_description(
     MU,
     NGEN,
     diversity,
-    full_test_list=None,
     use_streamlit=False,
     tf=None,
     dry_run=True,
@@ -737,7 +743,6 @@ def full_statistical_description(
         MU,
         NGEN,
         diversity,
-        full_test_list=keys,
         use_streamlit=False,
     )
     temp = final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value
@@ -778,11 +783,11 @@ def full_statistical_description(
     df = pd.DataFrame([results_dict])
 
     return df, results_dict, opt
-
+'''
 
 def inject_model_soma(
     dtc: DataTC, figname=None, solve_for_current=None, fixed: bool = False
-) -> Tuple[Any, Any, dict, Any, Any]:
+) -> Union[AnalogSignal, AnalogSignal, dict, Any, DataTC]:
     from neuronunit.tests.target_spike_current import SpikeCountSearch
 
     """
@@ -799,7 +804,7 @@ def inject_model_soma(
     if type(solve_for_current) is not type(None):
         observation_range = {}
         model = dtc.dtc_to_model()
-        temp = copy.copy(model.attrs)
+        temp = model.attrs
 
         if not fixed:
             observation_range["value"] = dtc.spk_count
@@ -821,16 +826,16 @@ def inject_model_soma(
         if hasattr(dtc, "spikes"):
             dtc.spikes = model._backend.spikes
         vm15 = model.get_membrane_potential()
-        dtc.vm_soma = copy.copy(vm15)
+        dtc.vm_soma = vm15
         del model
-        return vm15, uc, None, dtc
+        return None, vm15, uc, None, dtc
 
     if dtc.rheobase is None:
         rt = RheobaseTest(observation={"mean": 0 * pq.pA})
         rt.score_type = RelativeDifferenceScore
         dtc.rheobase = rt.generate_prediction(dtc.dtc_to_model())
         if dtc.rheobase is None:
-            return [None, None, None, None, dtc]
+            return None, None, None, None, dtc
     model = dtc.dtc_to_model()
     if type(dtc.rheobase) is type(dict()):
         if dtc.rheobase["value"] is None:
@@ -869,7 +874,7 @@ def inject_model_soma(
         }
         model.inject_square_current(uc)
         vm15 = model.get_membrane_potential()
-        dtc.vm_soma = copy.copy(vm15)
+        dtc.vm_soma = vm15
 
         del model
         model = dtc.dtc_to_model()
@@ -883,7 +888,7 @@ def inject_model_soma(
         vr = model.get_membrane_potential()
         dtc.vmr = np.mean(vr)
         del model
-        return [vm30, vm15, params, None, dtc]
+        return vm30, vm15, params, None, dtc
 
     else:
 
@@ -894,7 +899,7 @@ def inject_model_soma(
         }
         model._backend.inject_square_current(**uc)
         vm15 = model.get_membrane_potential()
-        dtc.vm_soma = copy.copy(vm15)
+        dtc.vm_soma = vm15
         del model
         model = dtc.dtc_to_model()
 
@@ -919,7 +924,7 @@ def inject_model_soma(
         return [vm30, vm15, params, None, dtc]
 
 
-def efel_evaluation(instance_obj: Any, specific_filter_list: List = None,current:float=None) -> Any:
+def efel_evaluation(instance_obj: Any, efel_filter_list: List = None,current:float=None) -> Any:
     """
     -- Synopsis: evaluate efel feature extraction criteria against on
     reduced cell models and probably efel data.
@@ -947,12 +952,13 @@ def efel_evaluation(instance_obj: Any, specific_filter_list: List = None,current
         if not np.max(vm_used.magnitude) > 0:
             vm_used_mag = [v + np.mean([0, float(np.max(v))]) * pq.mV for v in vm_used]
             if not np.max(vm_used_mag) > 0:
-                instance_obj.efel_15 = None
+                instance_obj.efel = None
                 return instance_obj
 
             trace3["V"] = vm_used_mag
-        if specific_filter_list is None:
-            specific_filter_list = [
+        if efel_filter_list is None:
+            print('activated')
+            efel_filter_list = [
                 "burst_ISI_indices",
                 "burst_mean_freq",
                 "burst_number",
@@ -963,16 +969,19 @@ def efel_evaluation(instance_obj: Any, specific_filter_list: List = None,current
                 "first_isi",
                 "ISI_CV",
                 "median_isi",
-                "Spikecount",
                 "all_ISI_values",
                 "ISI_values",
                 "time_to_first_spike",
                 "time_to_last_spike",
                 "time_to_second_spike",
                 "Spikecount",
-            ]
+                "peak_voltage",
+                "base_voltage",
+                "AHP_depth",
+                "AHP_depth_abs"]
+
         results = efel.getMeanFeatureValues(
-            [trace3], specific_filter_list, raise_warnings=False
+            [trace3], efel_filter_list, raise_warnings=False
         )
         if "MAT" not in instance_obj.backend:
             thresh_cross = threshold_detection(vm_used, 0 * pq.mV)
@@ -984,9 +993,10 @@ def efel_evaluation(instance_obj: Any, specific_filter_list: List = None,current
                 for index, tc in enumerate(instance_obj.spikes):
                     results[0]["spike_" + str(index)] = float(tc)
         nans = {k: v for k, v in results[0].items() if type(v) is type(None)}
-        instance_obj.efel_15 = None
-        instance_obj.efel_15 = results
+        instance_obj.efel = None
+        instance_obj.efel = results[0]
         efel.reset()
+        assert hasattr(instance_obj,'efel')
     return instance_obj
 
 
@@ -1036,7 +1046,7 @@ def inject_and_plot_model(
     return [vm, plt, dtc]
 
 
-def switch_logic(xtests):
+def switch_logic(xtests:Any=None)->List:
     try:
         atsd = TSD()
     except:
@@ -1079,7 +1089,7 @@ def switch_logic(xtests):
     return xtests
 
 
-def active_values(keyed:dict, rheobase, square:dict=None):
+def active_values(keyed:dict, rheobase, square:dict=None)->dict:
     keyed["injected_square_current"] = {}
     if square is None:
         if isinstance(rheobase, type(dict())):
@@ -1111,7 +1121,7 @@ def neutral_values(keyed: dict = {}) -> dict:
     return keyed
 
 
-def initialise_test(v:Any, rheobase:Any=None)->dict:
+def initialise_test(v:VmTest, rheobase:Any=None)->dict:
     if not isinstance(v, Iterable):
         v = [v]
     v = switch_logic(v)

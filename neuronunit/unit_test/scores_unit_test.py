@@ -75,6 +75,8 @@ class testOptimizationAllenMultiSpike(unittest.TestCase):
         model_type = "ADEXP"
         sum_fit = self.optimize_job(model_type,score_type=RelativeDifferenceScore)
         assert sum_fit<15.0
+    # this is just to speed up CI tests to avoid timeout.
+    @skip_incapable
     def test_opt_ZScore(self):
         model_type = "ADEXP"
         sum_fit = self.optimize_job(model_type,score_type=ZScore)

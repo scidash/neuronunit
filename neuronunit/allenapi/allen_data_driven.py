@@ -4,12 +4,14 @@ import os
 
 import bluepyopt as bpop
 import bluepyopt.ephys as ephys
+from bluepyopt.parameters import Parameter
 
 import matplotlib.pyplot as plt
 import copy
 import numpy as np
 from collections.abc import Iterable
-from bluepyopt.parameters import Parameter
+import pandas as pd
+
 from sciunit.scores import RelativeDifferenceScore
 from sciunit import TestSuite
 from sciunit.scores import ZScore
@@ -34,7 +36,9 @@ def opt_setup(
     cached=None,
     fixed_current=False,
     score_type=ZScore,
+    efel_filter_list=None
 ):
+    #cached=None
     if cached is not None:
         with open(str(specimen_id) + "later_allen_NU_tests.p", "rb") as f:
             suite = pickle.load(f)
@@ -56,7 +60,7 @@ def opt_setup(
             suite,
             specimen_id,
         ) = make_allen_tests_from_id.make_suite_known_sweep_from_static_models(
-            vmm, stimulus, specimen_id
+            vmm, stimulus, specimen_id,efel_filter_list
         )
         with open(str(specimen_id) + "later_allen_NU_tests.p", "wb") as f:
             pickle.dump(suite, f)
@@ -66,13 +70,11 @@ def opt_setup(
     else:
         target = StaticModel(vm=suite.traces["vm15"])
         target.vm_soma = suite.traces["vm15"]
-
     nu_tests = suite.tests
-
     attrs = {k: np.mean(v) for k, v in MODEL_PARAMS[model_type].items()}
     dtc = DataTC(backend=model_type, attrs=attrs)
     for t in nu_tests:
-        if t.name == "Spikecount_1.5x":
+        if t.name == "Spikecount":
             spk_count = float(t.observation["mean"])
             break
     observation_range = {}
@@ -105,7 +107,9 @@ def wrap_setups(
     fixed_current=False,
     cached=False,
     score_type=ZScore,
+    efel_filter_list=None
 ):
+    '''
     if os.path.isfile("325479788later_allen_NU_tests.p"):
         template_model, suite, nu_tests, target_current, spk_count = opt_setup(
             specimen_id,
@@ -113,24 +117,28 @@ def wrap_setups(
             target_num_spikes,
             template_model=template_model,
             fixed_current=False,
-            cached=True,
+            cached=False,
             score_type=score_type,
+            efel_filter_list=efel_filter_list
         )
     else:
-        template_model, suite, nu_tests, target_current, spk_count = opt_setup(
-            specimen_id,
-            model_type,
-            target_num_spikes,
-            template_model=template_model,
-            fixed_current=False,
-            cached=None,
-            score_type=score_type,
-        )
+    '''
+    template_model, suite, nu_tests, target_current, spk_count = opt_setup(
+        specimen_id,
+        model_type,
+        target_num_spikes,
+        template_model=template_model,
+        fixed_current=False,
+        cached=None,
+        score_type=score_type,
+        efel_filter_list=efel_filter_list
+    )
     template_model.seeded_current = target_current["value"]
     template_model.allen = True
     template_model.seeded_current
     template_model.NU = True
     template_model.backend = model_type
+    template_model.efel_filter_list = efel_filter_list
 
     cell_evaluator, template_model = opt_setup_two(
         model_type,
@@ -140,9 +148,12 @@ def wrap_setups(
         spk_count,
         template_model=template_model,
         score_type=score_type,
+        efel_filter_list=efel_filter_list
     )
-    cell_evaluator.cell_model.params = copy.copy(BPO_PARAMS[model_type])
+    cell_evaluator.cell_model.params = BPO_PARAMS[model_type]
     assert cell_evaluator.cell_model is not None
+    cell_evaluator.suite = None
+    cell_evaluator.suite = suite
     return cell_evaluator, template_model, suite, target_current, spk_count
 
 
@@ -167,6 +178,7 @@ class NUFeatureAllenMultiSpike(object):
         self.test.score_type = self.score_type
         feature_name = self.test.name
         if feature_name not in features.keys():
+            #print(self.test.name)
             return 1000.0
 
         if features[feature_name] is None:
@@ -176,8 +188,7 @@ class NUFeatureAllenMultiSpike(object):
 
         self.test.observation["mean"] = np.mean(self.test.observation["mean"])
         self.test.set_prediction(np.mean(features[self.test.name]))
-
-        if "Spikecount_1.5x" == feature_name:
+        if "Spikecount" == feature_name:
             delta = np.abs(
                 features[self.test.name] - np.mean(self.test.observation["mean"])
             )
@@ -198,11 +209,12 @@ class NUFeatureAllenMultiSpike(object):
             else:
                 delta = 1000.0
             if np.nan == delta or delta == np.inf:
-                delta = np.abs(
-                    features[self.test.name] - np.mean(self.test.observation["mean"])
-                )
+                delta = np.abs(float(score_gene.raw))
             if np.nan == delta or delta == np.inf:
                 delta = 1000.0
+            #if delta == 1000.0:
+            #    print(self.test.name)
+
             return delta
 
 
@@ -214,6 +226,7 @@ def opt_setup_two(
     spk_count,
     template_model=None,
     score_type=ZScore,
+    efel_filter_list=None
 ):
     assert template_model.backend == model_type
     template_model.params = BPO_PARAMS[model_type]
@@ -221,16 +234,16 @@ def opt_setup_two(
     template_model.seeded_current = target_current["value"]
     template_model.spk_count = spk_count
     sweep_protocols = []
-    for protocol_name, amplitude in [("step1", 0.05)]:
-        protocol = ephys.protocols.SweepProtocol(protocol_name, [None], [None])
-        sweep_protocols.append(protocol)
+    #for protocol_name, amplitude in [("step1", 0.05)]:
+    protocol = ephys.protocols.NeuronUnitAllenStepProtocol('onestep', [None], [None])
+    sweep_protocols.append(protocol)
     onestep_protocol = ephys.protocols.SequenceProtocol(
         "onestep", protocols=sweep_protocols
     )
     objectives = []
     spike_obs = []
     for tt in nu_tests:
-        if "Spikecount_1.5x" == tt.name:
+        if "Spikecount" == tt.name:
             spike_obs.append(tt.observation)
     spike_obs = sorted(spike_obs, key=lambda k: k["mean"], reverse=True)
     for cnt, tt in enumerate(nu_tests):
@@ -242,7 +255,7 @@ def opt_setup_two(
         objectives.append(objective)
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
     template_model.params_by_names(BPO_PARAMS[template_model.backend].keys())
-
+    template_model.efel_filter_list = efel_filter_list
     cell_evaluator = ephys.evaluators.CellEvaluator(
         cell_model=template_model,
         param_names=list(BPO_PARAMS[template_model.backend].keys()),
@@ -253,7 +266,7 @@ def opt_setup_two(
     assert cell_evaluator.cell_model is not None
     return cell_evaluator, template_model
 
-
+'''
 def multi_layered(MU, NGEN, mapping_funct, cell_evaluator2):
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator2,
@@ -266,7 +279,7 @@ def multi_layered(MU, NGEN, mapping_funct, cell_evaluator2):
     )
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
     return final_pop, hall_of_fame, logs, hist
-
+'''
 
 def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
 
@@ -284,12 +297,15 @@ def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
 
 def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count):
     best_ind = hall_of_fame[0]
-    # best_ind_dict = cell_evaluator.param_dict(best_ind)
-    # cell_evaluator.param_dict(best_ind)
-    # model = cell_evaluator.cell_model
-    # model.attrs = {str(k):float(v) for k,v in cell_evaluator.param_dict(best_ind).items()}
-    # model._backend.attrs = model.attrs
-    # model._backend.attrs = opt.attrs
+    model = cell_evaluator.cell_model
+    tests = cell_evaluator.suite.tests
+    scores = []
+    obs_preds = []
+
+    for t in tests:
+        scores.append(t.judge(model,prediction=t.prediction))
+        obs_preds.append((t.name,t.observation['mean'],t.prediction['mean'],scores[-1]))
+    df = pd.DataFrame(obs_preds)
 
     opt = model.model_to_dtc()
     opt.attrs = {
@@ -302,17 +318,14 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
         target.vm_soma = suite.traces["vm15"]
     opt.seeded_current = target_current["value"]
     opt.spk_count = spk_count
-
     target.seeded_current = target_current["value"]
     target.spk_count = spk_count
-
     _, _, _, target = inject_model_soma(
         target, solve_for_current=target_current["value"]
     )
     _, _, _, opt = inject_model_soma(opt, solve_for_current=target_current["value"])
-    return opt, target
 
-
+    return opt, target,scores,obs_preds,df
 def make_allen_hard_coded_complete():
     """
     Manually specificy 4-5
@@ -324,7 +337,7 @@ def make_allen_hard_coded_complete():
     471819401
     482493761
     """
-    from neuronunit.optimisation.optimization_management import TSD
+    from neuronunit.optimization.optimization_management import TSD
 
     ##
     # 623960880
@@ -340,12 +353,11 @@ def make_allen_hard_coded_complete():
     fislope = FITest(
         observation={"value": 0.18 * (pq.Hz / pq.pA), "mean": 0.18 * (pq.Hz / pq.pA)}
     )
-    fislope.score_type = RatioScore
+    fislope.score_type = RelativeDifferenceScore
 
-    allen_tests = [fislope, tc, rp, ir, rt]
+    allen_tests = [tc, rp, ir, rt]
     for t in allen_tests:
-        t.score_type = RatioScore
-    allen_tests[-1].score_type = RatioScore
+        t.score_type = RelativeDifferenceScore
     allen_suite_623960880 = TestSuite(allen_tests)
     allen_suite_623960880.name = (
         "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/623960880"
@@ -367,13 +379,12 @@ def make_allen_hard_coded_complete():
     fislope = FITest(
         observation={"value": 0.12 * (pq.Hz / pq.pA), "mean": 0.12 * (pq.Hz / pq.pA)}
     )
-    fislope.score_type = RatioScore
+    fislope.score_type = RelativeDifferenceScore
     ##
 
-    allen_tests = [fislope, tc, rp, ir, rt]
+    allen_tests = [tc, rp, ir, rt]
     for t in allen_tests:
-        t.score_type = RatioScore
-    allen_tests[-1].score_type = RatioScore
+        t.score_type = RelativeDifferenceScore
     allen_suite_623893177 = TestSuite(allen_tests)
     allen_suite_623893177.name = (
         "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/623893177"
@@ -394,12 +405,12 @@ def make_allen_hard_coded_complete():
     fislope = FITest(
         observation={"value": 0.09 * (pq.Hz / pq.pA), "mean": 0.09 * (pq.Hz / pq.pA)}
     )
-    fislope.score_type = RatioScore
+    fislope.score_type = RelativeDifferenceScore
 
-    allen_tests = [rt, tc, rp, ir, fislope]
+    allen_tests = [rt, tc, rp, ir]
     for t in allen_tests:
-        t.score_type = RatioScore
-    allen_tests[-1].score_type = ZScore
+        t.score_type = RelativeDifferenceScore
+    #allen_tests[-1].score_type = ZScore
     allen_suite482493761 = TestSuite(allen_tests)
     allen_suite482493761.name = (
         "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/482493761"
@@ -415,19 +426,17 @@ def make_allen_hard_coded_complete():
     fislope = FITest(
         observation={"value": 0.18 * (pq.Hz / pq.pA), "mean": 0.18 * (pq.Hz / pq.pA)}
     )
-    fislope.score_type = RatioScore
+    fislope.score_type = RelativeDifferenceScore
 
     # F/I Curve Slope	0.18
-    allen_tests = [rt, tc, rp, ir, fislope]
+    allen_tests = [rt, tc, rp, ir]
     for t in allen_tests:
-        t.score_type = RatioScore
-    allen_tests[-1].score_type = ZScore
+        t.score_type = RelativeDifferenceScore
     allen_suite471819401 = TestSuite(allen_tests)
     allen_suite471819401.name = (
         "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/471819401"
     )
     list_of_dicts = []
-    # cells={}
     cells["471819401"] = TSD(allen_suite471819401)
     cells["482493761"] = TSD(allen_suite482493761)
 
@@ -441,7 +450,7 @@ def make_allen_hard_coded_complete():
                 observations[k1] = np.round(vsd[k1].observation["mean"], 2)
                 observations["name"] = k
         list_of_dicts.append(observations)
-    df = pd.DataFrame(list_of_dicts)
+    df = pd.DataFrame(list_of_dicts,index=cells.keys())
     df
 
     return (
