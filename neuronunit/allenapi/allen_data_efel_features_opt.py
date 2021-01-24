@@ -233,6 +233,8 @@ def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
         selector_name="IBEA",
         mutpb=mutpb,
         cxpb=cxpb,
+        ELITISM=True,
+        NEURONUNIT=True
     )
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
     return final_pop, hall_of_fame, logs, hist

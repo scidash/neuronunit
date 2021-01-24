@@ -1,10 +1,14 @@
 # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
+from sciunit.utils import config_set
+config_set('PREVALIDATE', False)
 
 import dask
 from tqdm import tqdm
 import warnings
+
+from neo import AnalogSignal
 
 SILENT = True
 if SILENT:
@@ -60,11 +64,6 @@ from neuronunit.tests.fi import RheobaseTest
 from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2widths
 from neuronunit.tests import VmTest
 
-#from sciunit.scores.collections import ScoreArray
-#try:
-#    from sklearn.cluster import KMeans
-#except:#
-#    warnings.warn("SKLearn library not available, consider installing")
 
 class TSD(dict):
     """
@@ -78,7 +77,6 @@ class TSD(dict):
         self.DO = None
         self.use_rheobase_score = use_rheobase_score
         self.backend = None
-        #self.three_step = None
         if type(tests) is TestSuite:
             tests = OrderedDict({t.name: t for t in tests.tests})
         if type(tests) is type(dict()):
@@ -110,88 +108,6 @@ class TSD(dict):
         del self.DO
         return {k: v for k, v in self.items()}
 
-
-    def optimize(self,**kwargs):
-        import shelve
-        defaults = {'param_edges':None,
-                    'backend':None,\
-                    'protocol':{'allen': False, 'elephant': True},\
-                    'MU':5,\
-                    'NGEN':5,\
-                    'free_parameters':None,\
-                    'seed_pop':None,\
-                    'hold_constant':None,
-                    'plot':False,'figname':None,
-                    'use_rheobase_score':self.use_rheobase_score,
-                    'ignore_cached':False
-                    }
-        defaults.update(kwargs)
-        kwargs = defaults
-        d = shelve.open('opt_models_cache')  # open -- file may get suffix added by low-level
-        query_key = str(kwargs['NGEN']) +\
-        str(kwargs['free_parameters']) +\
-        str(kwargs['backend']) +\
-        str(kwargs['MU']) +\
-        str(kwargs['protocol']) +\
-        str(kwargs['hold_constant'])
-        flag = query_key in d
-
-        if flag and not kwargs['ignore_cached']:
-            ###
-            # Hack
-            ###
-            #creator.create("FitnessMin", base.Fitness, weights=tuple(-1.0 for i in range(0,10)))
-            #creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
-            ###
-            # End hack
-            ###
-            ga_out = d[query_key]
-
-            d.close()
-            del d
-            return ga_out
-        else:
-            d.close()
-            del d
-            if type(kwargs['param_edges']) is type(None):
-                from neuronunit.optimization import model_parameters
-                param_edges = model_parameters.MODEL_PARAMS[kwargs['backend']]
-            if type(kwargs['free_parameters']) is type(None):
-                if type(kwargs['param_edges']) is not type(None):
-                    free_parameters=kwargs['param_edges'].keys()
-                else:
-                    from neuronunit.optimization import model_parameters
-                    free_parameters = model_parameters.MODEL_PARAMS[kwargs['backend']].keys()
-            else:
-                free_parameters = kwargs['free_parameters']
-
-            if kwargs['hold_constant'] is None:
-                if len(free_parameters) < len(param_edges):
-                    pass
-            '''
-            PROBABLY REWRITE THIS
-
-            self.DO = make_ga_DO(param_edges, \
-                                kwargs['NGEN'], \
-                                self, \
-                                free_parameters=free_parameters, \
-                                backend=kwargs['backend'], \
-                                MU = kwargs['MU'], \
-                                protocol=kwargs['protocol'],
-                                seed_pop = kwargs['seed_pop'], \
-                                hc=kwargs['hold_constant']
-                                )
-            '''
-            self.MU = self.DO.MU = kwargs['MU']
-            self.NGEN = self.DO.NGEN = kwargs['NGEN']
-
-            ga_out = self.DO.run(NGEN = self.DO.NGEN)
-            self.backend = kwargs['backend']
-            return ga_out
-
-
-
-
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def random_p(model_type):
@@ -209,13 +125,8 @@ def random_p(model_type):
 @cython.wraparound(False)
 def process_rparam(backend, free_parameters):
     random_param = random_p(backend)
-    if "GLIF" in str(backend):
-        random_param["init_AScurrents"] = [0.0, 0.0]
-        random_param["asc_tau_array"] = [0.3333333333333333, 0.01]
-        rp = random_param
-    else:
-        random_param.pop("Iext", None)
-        rp = random_param
+    random_param.pop("Iext", None)
+    rp = random_param
     if free_parameters is not None:
         reduced_parameter_set = {}
         for k in free_parameters:
@@ -278,7 +189,6 @@ def get_rh(dtc:DataTC,
     backend_ = dtc.backend
     rtest = RheobaseTest(observation=place_holder, name="RheobaseTest")
     rtest.score_type = RelativeDifferenceScore
-    #dtc.rheobase = None
     assert len(dtc.attrs)
     model = dtc.dtc_to_model()
     rtest.params["injected_square_current"] = {}
@@ -302,7 +212,6 @@ def get_new_rtest(dtc:DataTC)->RheobaseTest:
     rtest.score_type = RelativeDifferenceScore
     return rtest
 
-
 def get_rtest(dtc: DataTC)->RheobaseTest:
     if not hasattr(dtc, "tests"):
         rtest = get_new_rtest(dtc)
@@ -311,10 +220,8 @@ def get_rtest(dtc: DataTC)->RheobaseTest:
             rtests = [t for t in dtc.tests if "rheo" in t.name.lower()]
         else:
             rtests = [v for k, v in dtc.tests.items() if "rheo" in str(k).lower()]
-
         if len(rtests):
             rtest = rtests[0]
-
         else:
             rtest = get_new_rtest(dtc)
     return rtest
@@ -325,7 +232,6 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
     --Synopsis: If  test taking data, and objects are present (observations etc).
     Take the rheobase test and store it in the data transport container.
     """
-
     if hasattr(dtc, "tests"):
         if type(dtc.tests) is type({}) and str("RheobaseTest") in dtc.tests.keys():
             rtest = dtc.tests["RheobaseTest"]
@@ -384,20 +290,6 @@ def basic_expVar(trace1, trace2):
         )
 
 
-"""
-def jrt(use_tests,model_type,
-        protocol={'elephant':True,'allen':False})->OptMan:
-    use_tests = TSD(use_tests)
-    use_tests.use_rheobase_score = True
-    edges = model_parameters.MODEL_PARAMS[model_type]
-    OM = OptMan(use_tests,
-        backend=model_type,
-        boundary_dict=edges,
-        protocol=protocol)
-    return OM
-"""
-
-
 def train_length(dtc: DataTC) -> DataTC:
     if not hasattr(dtc, "efel"):
         dtc.efel = [{}]
@@ -421,7 +313,7 @@ def multi_spiking_feature_extraction(dtc:DataTC,
         dtc = efel_evaluation(dtc,efel_filter_list)
         dtc.vm_soma = None
     else:
-        _, _, _, dtc = inject_model_soma(dtc, solve_for_current=solve_for_current)
+        _, _, _, _, dtc = inject_model_soma(dtc, solve_for_current=solve_for_current)
         if dtc.vm_soma is None:
             return dtc
         dtc = efel_evaluation(dtc,efel_filter_list)
@@ -1121,7 +1013,7 @@ def neutral_values(keyed: dict = {}) -> dict:
     return keyed
 
 
-def initialise_test(v:VmTest, rheobase:Any=None)->dict:
+def initialise_test(v:Any, rheobase:Any=None)->dict:
     if not isinstance(v, Iterable):
         v = [v]
     v = switch_logic(v)

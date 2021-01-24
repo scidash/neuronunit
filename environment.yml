@@ -16,5 +16,5 @@ dependencies:
   - asciiplotlib
   - ipfx
   - git+https://github.com/russelljjarvis/jit_jub@neuronunit
-  - git+https://github.com/russelljjarvis/BluePyOpt
+  - git+https://github.com/russelljjarvis/BluePyOpt@neuronunit_reduced_cells
   - git+https://github.com/russelljjarvis/sciunit@dev

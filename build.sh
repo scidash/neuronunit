@@ -15,7 +15,7 @@ git clone -b neuronunit https://github.com/russelljjarvis/jit_hub.git
 cd jit_hub; pip install -e .; cd ..;
 pip install cython
 pip install asciiplotlib;
-git clone -b master https://github.com/russelljjarvis/BluePyOpt.git
+git clone -b neuronunit_reduced_cells https://github.com/russelljjarvis/BluePyOpt.git
 cd BluePyOpt; pip install -e .
 pip install git+https://github.com/russelljjarvis/eFEL
 pip install ipfx
