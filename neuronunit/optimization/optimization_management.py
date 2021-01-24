@@ -732,7 +732,7 @@ def inject_model_soma(
     model = dtc.dtc_to_model()
     if type(dtc.rheobase) is type(dict()):
         if dtc.rheobase["value"] is None:
-            return [None, None, None, None, dtc]
+            return None, None, None, None, dtc
         else:
             rheobase = dtc.rheobase["value"]
     else:
