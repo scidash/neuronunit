@@ -236,7 +236,7 @@ def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
         offspring_size=MU,
-        eta=5,
+        eta=25,
         map_function=map,
         selector_name="IBEA",
         mutpb=mutpb,
@@ -263,7 +263,7 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
         target.vm_soma = suite.traces["vm15"]
     opt.seeded_current = target_current["value"]
     opt.spk_count = spk_count
-    opt.attrs_to_params()
+    opt = opt.attrs_to_params()
 
     target.seeded_current = target_current["value"]
     target.spk_count = spk_count

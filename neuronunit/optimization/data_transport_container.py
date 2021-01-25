@@ -79,11 +79,12 @@ class DataTC(object):
         self.param = lop
         return lop
 
-    def attrs_to_params(self) -> None:
+    def attrs_to_params(self):
         self.params = self.attrs
         for k, v in self.params.items():
             if np.round(v, 2) != 0:
                 self.params[k] = np.round(v, 2)
+        return self
 
     def make_pretty(self, tests) -> pd.DataFrame:
         import pandas as pd
