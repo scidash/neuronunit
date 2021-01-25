@@ -66,7 +66,7 @@ class testOptimizationAllenMultiSpike(unittest.TestCase):
                   score_type=score_type
         )
         final_pop, hall_of_fame, logs, hist = opt_exec(MU,NGEN,mapping_funct,cell_evaluator)
-        opt,target = opt_to_model(hall_of_fame,cell_evaluator,suite, target_current, spk_count)
+        opt, target, scores, obs_preds, df = opt_to_model(hall_of_fame,cell_evaluator,suite, target_current, spk_count)
         best_ind = hall_of_fame[0]
         fitnesses = cell_evaluator.evaluate_with_lists(best_ind)
         target.vm_soma = suite.traces['vm15']
@@ -81,7 +81,7 @@ class testOptimizationAllenMultiSpike(unittest.TestCase):
         model_type = "ADEXP"
         sum_fit = self.optimize_job(model_type,score_type=ZScore)
         assert sum_fit<2.1
-    @unittest.skip    
+    @unittest.skip
     def test_opt_relative_diff_izhi(self):
         model_type = "IZHI"
         self.optimize_job(model_type,score_type=RelativeDifferenceScore)
