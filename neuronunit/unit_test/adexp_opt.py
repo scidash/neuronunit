@@ -82,7 +82,8 @@ class testOptimization(unittest.TestCase):
                                   template_model=model,
                                   fixed_current=False,
                                   cached=False,
-                                  score_type=RelativeDifferenceScore)
+                                  score_type=RelativeDifferenceScore,
+				   efel_filter_iterable=efel_filter_iterable)
 
         NGEN = 55
         MU = 35
