@@ -81,8 +81,8 @@ class testOptimization(unittest.TestCase):
                                   cached=False,
                                   score_type=RelativeDifferenceScore)
 
-        NGEN = 155
-        MU = 35
+        NGEN = 165
+        MU = 55
 
         mapping_funct = dask_map_function
         final_pop, hall_of_fame, logs, hist = opt_exec(
@@ -93,8 +93,8 @@ class testOptimization(unittest.TestCase):
         )
         best_ind = hall_of_fame[0]
         fitnesses = cell_evaluator.evaluate_with_lists(best_ind)
-        assert np.sum(fitnesses) < 8.5
-        self.assertGreater(8.5, np.sum(fitnesses))
+        assert np.sum(fitnesses) < 10.5
+        self.assertGreater(10.5, np.sum(fitnesses))
 
 if __name__ == "__main__":
     unittest.main()
