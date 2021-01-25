@@ -3,17 +3,17 @@
 from .base import *
 
 
-class BackendCacheTestCase(NotebookTools, unittest.TestCase):
+class BackendCacheTestCase(NotebookTools,
+                              unittest.TestCase):
     """Testing reading/writing to the backend cache"""
 
-    path = "."
+    path = '.'
 
     def test_cache_use(self):
-        self.do_notebook("cache_use")
+        self.do_notebook('cache_use')
 
     def test_cache_edit(self):
-        self.do_notebook("cache_edit")
+        self.do_notebook('cache_edit')
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
