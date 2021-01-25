@@ -20,7 +20,7 @@ from allensdk.api.queries.glif_api import GlifApi
 import os
 import pickle
 from allensdk.api.queries.biophysical_api import BiophysicalApi
-from neuronunit.optimisation.data_transport_container import DataTC
+from neuronunit.optimization.data_transport_container import DataTC
 
 # from allensdk.model.glif.glif_neuron import GlifNeuron
 

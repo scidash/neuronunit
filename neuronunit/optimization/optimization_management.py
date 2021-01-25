@@ -582,7 +582,7 @@ def _opt_(
     opt.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
-    df = opt.make_pretty(tests=tests)
+    #df = opt.make_pretty(tests=tests)
     best_fit_val = best_ind.fitness.values
     return (
         final_pop,
@@ -733,29 +733,32 @@ def efel_evaluation(
         results = efel.getMeanFeatureValues(
             [trace3], efel_filter_list, raise_warnings=False
         )
-        # if "MAT" not in instance_obj.backend:
-        #    thresh_cross = threshold_detection(vm_used, 0 * pq.mV)
-        #    for index, tc in enumerate(thresh_cross):
-        #        results[0]["spike_" + str(index)] = float(tc)
-        # else:
+
         if hasattr(instance_obj, "spikes"):
-            instance_obj.spikes = model._backend.spikes
-            for index, tc in enumerate(instance_obj.spikes):
-                results[0]["spike_" + str(index)] = float(tc)
+            spikes = instance_obj._backend.spikes
+        else:
+            spikes = threshold_detection(vm_used)
+        for index, tc in enumerate(spikes):
+            results[0]["spike_" + str(index)] = float(tc)
         instance_obj.efel = None
         instance_obj.efel = results[0]
-        # print(instance_obj.efel.keys())
-        """
-        if isinstance(efel_filter_iterable,type(dict())):
-            for k,v in instance_obj.efel.items():
-                units = efel_filter_iterable[k]
-                if units is not None and v is not None:
-                    instance_obj.efel[k] = v*units
-        """
         efel.reset()
+        #instance_obj = apply_units_to_efel(instance_obj,
+        #                                    efel_filter_iterable)
         assert hasattr(instance_obj, "efel")
     return instance_obj
 
+def generic_nu_tests_to_bpo_protocols(multi_spiking=None):
+    pass
+
+
+def apply_units_to_efel(instance_obj,efel_filter_iterable):
+    if isinstance(efel_filter_iterable,type(dict())):
+        for k,v in instance_obj.efel.items():
+            units = efel_filter_iterable[k]
+            if units is not None and v is not None:
+                instance_obj.efel[k] = v*units
+    return instance_obj
 
 def inject_and_plot_model(
     dtc: DataTC, figname=None, plotly=True, verbose=False

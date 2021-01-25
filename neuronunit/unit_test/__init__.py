@@ -19,7 +19,8 @@ from .model_tests import (
     VeryReducedModelTestCase,
     StaticExternalTestCase,
 )
-from .observation_tests import ObservationsTestCase
+#from .observation_tests import ObservationsTestCase
+'''
 from .test_tests import (
     TestsPassiveTestCase,
     TestsWaveformTestCase,
@@ -28,13 +29,15 @@ from .test_tests import (
     TestsChannelTestCase,
     FakeTestCase,
 )
+'''
 from .misc_tests import EphysPropertiesTestCase
-from .sciunit_tests import SciUnitTestCase
-from .cache_tests import BackendCacheTestCase
+#from .cache_tests import BackendCacheTestCase
 from .opt_ephys_properties import testOptimizationEphysCase
 from .scores_unit_test import testOptimizationAllenMultiSpike
-from .adexp_opt import *
+#from .adexp_opt import *
 '''
+from .capabilities_tests import *
+
 from .test_druckmann2013 import (
     Model1TestCase,
     Model2TestCase,
@@ -52,5 +55,6 @@ from .test_druckmann2013 import (
 '''
 #from .test_morphology import MorphologyTestCase
 #from .test_optimization import DataTCTestCase
-#from .capabilities_tests import *
+#from .sciunit_tests import SciUnitTestCase
+
 #from .adexp_opt import *

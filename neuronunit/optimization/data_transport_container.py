@@ -19,7 +19,7 @@ class DataTC(object):
         can be cheaply transported across HOSTS/CPUs
     """
 
-    def model_default(self) -> None:
+    def model_default(self):
         if self.backend is not None:
             if self.attrs is None:
                 from neuronunit.optimization.model_parameters import (
@@ -71,7 +71,6 @@ class DataTC(object):
 
     def to_bpo_param(self, attrs: dict = {}) -> dict:
         from bluepyopt.parameters import Parameter
-
         lop = {}
         for k, v in attrs.items():
             p = Parameter(name=k, bounds=v, frozen=False)
@@ -84,6 +83,9 @@ class DataTC(object):
         for k, v in self.params.items():
             if np.round(v, 2) != 0:
                 self.params[k] = np.round(v, 2)
+            if k=='celltype':
+                self.params[k] = int(np.round(v, 0))
+
         return self
 
     def make_pretty(self, tests) -> pd.DataFrame:
@@ -117,6 +119,7 @@ class DataTC(object):
 
         for k, v in holding_obs.items():
             if k in holding_obs.keys() and k in holding_preds:
+
                 v.rescale_preferred()
                 v = v.simplified
                 if np.round(v, 2) != 0:
@@ -124,6 +127,8 @@ class DataTC(object):
 
         for k, v in holding_preds.items():
             if k in holding_obs.keys() and k in holding_preds:
+                #units1 = holding_preds[k].units  # v.units)
+
                 units1 = holding_preds[k].rescale_preferred().units  # v.units)
 
                 holding_preds[k] = holding_preds[k].simplified

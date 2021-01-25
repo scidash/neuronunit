@@ -25,14 +25,20 @@ from neuronunit.allenapi.make_allen_tests import AllenTest
 
 from neuronunit.optimization.optimization_management import inject_model_soma
 from neuronunit.optimization.model_parameters import BPO_PARAMS
-
+from neuronunit.tests import (
+    RheobaseTest,
+    RestingPotentialTest,
+    InputResistanceTest,
+    TimeConstantTest,
+    FITest
+)
 
 def opt_setup(
     specimen_id,
     model_type,
     target_num,
     template_model=None,
-    cached=None,
+    cached=False,
     fixed_current=False,
     score_type=ZScore,
     efel_filter_iterable=None,
