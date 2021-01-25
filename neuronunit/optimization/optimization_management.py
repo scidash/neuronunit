@@ -780,6 +780,7 @@ def inject_and_plot_model(
     if vm is None:
         return [None, None, None]
     if not plotly:
+        import matplotlib.pyplot as plt
         plt.clf()
         plt.figure()
         if dtc.backend in str("HH"):
