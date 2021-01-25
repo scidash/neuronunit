@@ -29,7 +29,7 @@ nbformat==4.4.0
 quantities==0.12.4
 dask[bag]
 fsspec>=0.3.3
-git+https://github.com/russelljjarvis/eFEL
 cython
 git+https://github.com/russelljjarvis/sciunit@dev
 git+https://github.com/russelljjarvis/BluePyOpt@neuronunit_reduced_cells
+git+https://github.com/russelljjarvis/eFEL
