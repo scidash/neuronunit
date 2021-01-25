@@ -22,10 +22,10 @@ try:
 except:
     warnings.warn("Blue brain feature extraction not available, consider installing")
 
+
 import numpy as np
 import cython
 import pandas as pd
-from sklearn.model_selection import ParameterGrid
 from collections import OrderedDict
 from collections.abc import Iterable
 import math
