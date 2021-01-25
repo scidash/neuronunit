@@ -155,10 +155,10 @@ class NUFeatureAllenMultiSpike(object):
                     if score_gene.log_norm_score is not None:
                         delta = np.abs(float(score_gene.log_norm_score))
                     else:
-   	                if score_gene.raw is not None:
-	                    delta = np.abs(float(score_gene.raw))
-	                else:
-	                    delta = 1000.0
+                        if score_gene.raw is not None:
+                            delta = np.abs(float(score_gene.raw))
+                        else:
+                            delta = 1000.0
 
                 else:
                     if score_gene.raw is not None:
