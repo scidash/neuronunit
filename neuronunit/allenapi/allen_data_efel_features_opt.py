@@ -3,14 +3,17 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
 import pickle
 import seaborn as sns
 import os
+from scipy.interpolate import interp1d
+
+import bluepyopt as bpop
+import bluepyopt.ephys as ephys
+from bluepyopt.parameters import Parameter
+
 import matplotlib.pyplot as plt
 import copy
 import numpy as np
 from collections.abc import Iterable
-
-from bluepyopt.parameters import Parameter
-import bluepyopt as bpop
-import bluepyopt.ephys as ephys
+import pandas as pd
 
 from sciunit.scores import RelativeDifferenceScore
 from sciunit import TestSuite
@@ -134,7 +137,6 @@ class NUFeatureAllenMultiSpike(object):
 
         self.test.observation["mean"] = np.mean(self.test.observation["mean"])
         self.test.set_prediction(np.mean(features[self.test.name]))
-
         if "Spikecount" == feature_name:
             delta = np.abs(
                 features[self.test.name] - np.mean(self.test.observation["mean"])
@@ -153,7 +155,11 @@ class NUFeatureAllenMultiSpike(object):
                     if score_gene.log_norm_score is not None:
                         delta = np.abs(float(score_gene.log_norm_score))
                     else:
-                        delta = 1000.0
+   	                if score_gene.raw is not None:
+	                    delta = np.abs(float(score_gene.raw))
+	                else:
+	                    delta = 1000.0
+
                 else:
                     if score_gene.raw is not None:
                         delta = np.abs(float(score_gene.raw))
@@ -203,7 +209,7 @@ def opt_setup_two(
         objectives.append(objective)
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
     template_model.params_by_names(BPO_PARAMS[template_model.backend].keys())
-
+    template_model.efel_filter_iterable = efel_filter_iterable
     cell_evaluator = ephys.evaluators.CellEvaluator(
         cell_model=template_model,
         param_names=list(BPO_PARAMS[template_model.backend].keys()),
@@ -251,6 +257,16 @@ def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
 def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count):
     best_ind = hall_of_fame[0]
     model = cell_evaluator.cell_model
+    tests = cell_evaluator.suite.tests
+    scores = []
+    obs_preds = []
+
+    for t in tests:
+        scores.append(t.judge(model, prediction=t.prediction))
+        obs_preds.append(
+            (t.name, t.observation["mean"], t.prediction["mean"], scores[-1])
+        )
+    df = pd.DataFrame(obs_preds)
 
     opt = model.model_to_dtc()
     opt.attrs = {
@@ -267,15 +283,13 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
 
     target.seeded_current = target_current["value"]
     target.spk_count = spk_count
-
     _, _, _, _, target = inject_model_soma(
         target, solve_for_current=target_current["value"]
     )
     _, _, _, _, opt = inject_model_soma(opt, solve_for_current=target_current["value"])
-    return opt, target
 
+    return opt, target, scores, obs_preds, df
 
-from scipy.interpolate import interp1d
 
 
 def downsample(array, npts):

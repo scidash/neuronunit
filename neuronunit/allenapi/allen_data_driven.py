@@ -1,3 +1,5 @@
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
+
 import pickle
 import seaborn as sns
 import os
@@ -22,9 +24,7 @@ from neuronunit.allenapi.make_allen_tests_from_id import *
 from neuronunit.allenapi.make_allen_tests import AllenTest
 
 from neuronunit.optimization.optimization_management import inject_model_soma
-from neuronunit.tests import *
-from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
-from neuronunit.allenapi.utils import dask_map_function
+from neuronunit.optimization.model_parameters import BPO_PARAMS
 
 
 def opt_setup(
@@ -37,8 +37,7 @@ def opt_setup(
     score_type=ZScore,
     efel_filter_iterable=None,
 ):
-    # cached=None
-    if cached is not None:
+    if cached:
         with open(str(specimen_id) + "later_allen_NU_tests.p", "rb") as f:
             suite = pickle.load(f)
 
@@ -59,7 +58,7 @@ def opt_setup(
             suite,
             specimen_id,
         ) = make_allen_tests_from_id.make_suite_known_sweep_from_static_models(
-            vmm, stimulus, specimen_id, efel_filter_iterable
+            vmm, stimulus, specimen_id, efel_filter_iterable=efel_filter_iterable
         )
         with open(str(specimen_id) + "later_allen_NU_tests.p", "wb") as f:
             pickle.dump(suite, f)
@@ -69,7 +68,9 @@ def opt_setup(
     else:
         target = StaticModel(vm=suite.traces["vm15"])
         target.vm_soma = suite.traces["vm15"]
+
     nu_tests = suite.tests
+
     attrs = {k: np.mean(v) for k, v in MODEL_PARAMS[model_type].items()}
     dtc = DataTC(backend=model_type, attrs=attrs)
     for t in nu_tests:
@@ -175,7 +176,6 @@ class NUFeatureAllenMultiSpike(object):
         self.test.score_type = self.score_type
         feature_name = self.test.name
         if feature_name not in features.keys():
-            # print(self.test.name)
             return 1000.0
 
         if features[feature_name] is None:
@@ -231,10 +231,12 @@ def opt_setup_two(
     template_model.seeded_current = target_current["value"]
     template_model.spk_count = spk_count
     sweep_protocols = []
-    protocol = ephys.protocols.NeuronUnitAllenStepProtocol("onestep", [None], [None])
+    protocol = ephys.protocols.NeuronUnitAllenStepProtocol(
+        "multi_spiking", [None], [None]
+    )
     sweep_protocols.append(protocol)
     onestep_protocol = ephys.protocols.SequenceProtocol(
-        "onestep", protocols=sweep_protocols
+        "multi_spiking_wraper", protocols=sweep_protocols
     )
     objectives = []
     spike_obs = []
@@ -284,6 +286,7 @@ def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
         offspring_size=MU,
+        eta=25,
         map_function=map,
         selector_name="IBEA",
         mutpb=mutpb,
@@ -320,6 +323,8 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
         target.vm_soma = suite.traces["vm15"]
     opt.seeded_current = target_current["value"]
     opt.spk_count = spk_count
+    opt = opt.attrs_to_params()
+
     target.seeded_current = target_current["value"]
     target.spk_count = spk_count
     _, _, _, _, target = inject_model_soma(
