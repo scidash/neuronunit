@@ -69,7 +69,7 @@ class testOptimizationAllenMultiSpike(unittest.TestCase):
         opt, target, scores, obs_preds, df = opt_to_model(hall_of_fame,cell_evaluator,suite, target_current, spk_count)
         best_ind = hall_of_fame[0]
         fitnesses = cell_evaluator.evaluate_with_lists(best_ind)
-        target.vm_soma = suite.traces['vm15']
+        target.vm_soma = suite.traces['vm_soma']
         return np.sum(fitnesses)
     def test_opt_relative_diff(self):
         model_type = "ADEXP"
