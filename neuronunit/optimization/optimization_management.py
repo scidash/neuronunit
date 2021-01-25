@@ -51,7 +51,6 @@ from sciunit.scores import RelativeDifferenceScore
 
 from jithub.models import model_classes
 
-
 from neuronunit.optimization.data_transport_container import DataTC
 from neuronunit.tests.base import AMPL, DELAY, DURATION
 from neuronunit.tests.target_spike_current import (
@@ -301,7 +300,7 @@ def train_length(dtc: DataTC) -> DataTC:
 
 def multi_spiking_feature_extraction(dtc:DataTC,
         solve_for_current:bool=None,
-        efel_filter_list:List=None)->DataTC:
+        efel_filter_iterable:List=None)->DataTC:
     """
     Perform multi spiking feature extraction
     via EFEL because its fast
@@ -310,13 +309,13 @@ def multi_spiking_feature_extraction(dtc:DataTC,
         _, _, _, _, dtc = inject_model_soma(dtc)
         if dtc.vm_soma is None:
             return dtc
-        dtc = efel_evaluation(dtc,efel_filter_list)
+        dtc = efel_evaluation(dtc,efel_filter_iterable)
         dtc.vm_soma = None
     else:
         _, _, _, _, dtc = inject_model_soma(dtc, solve_for_current=solve_for_current)
         if dtc.vm_soma is None:
             return dtc
-        dtc = efel_evaluation(dtc,efel_filter_list)
+        dtc = efel_evaluation(dtc,efel_filter_iterable)
     if hasattr(dtc,'efel'):
         if dtc.efel is not None:
             dtc = train_length(dtc)
@@ -483,7 +482,7 @@ def make_evaluator(
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
 
     sweep_protocols = []
-    protocol = ephys.protocols.NeuronUnitAllenStepProtocol("step1", [None], [None])
+    protocol = ephys.protocols.NeuronUnitAllenStepProtocol("onestep", [None], [None])
     sweep_protocols.append(protocol)
     onestep_protocol = ephys.protocols.SequenceProtocol(
         "onestep", protocols=sweep_protocols
@@ -588,7 +587,6 @@ def public_opt(
     diversity,
     score_type=RelativeDifferenceScore
 ):
-
     _,_,_,_,_,_,opt,obs_preds,df = _opt_(constraints=constraints,
     PARAMS=PARAMS,
     test_key=test_key,
@@ -597,86 +595,7 @@ def public_opt(
     NGEN=NGEN,
     diversity=diversity,
     score_type=score_type)
-
     return opt,obs_preds,df
-
-'''
-def full_statistical_description(
-    constraints,
-    exp_cell,
-    MODEL_PARAMS,
-    test_key,
-    model_value,
-    MU,
-    NGEN,
-    diversity,
-    use_streamlit=False,
-    tf=None,
-    dry_run=True,
-):
-
-    if type(constraints) is type(list()):
-        constraints = TSD(constraints)
-
-    if hasattr(constraints, "keys"):
-        keys = constraints.keys()
-
-    else:
-        constraints_d = {}
-        for t in constraints:
-            constraints_d[t.name] = t
-        constraints = constraints_d
-        keys = constraints.keys()
-
-    final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value = _opt(
-        constraints,
-        MODEL_PARAMS,
-        test_key,
-        model_value,
-        MU,
-        NGEN,
-        diversity,
-        use_streamlit=False,
-    )
-    temp = final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value
-    opt_pickle = opt, obs_preds, chi_sqr_opt, p_value
-    pickle.dump(
-        opt_pickle, open(str(exp_cell) + str("_") + str(model_value) + "_.p", "wb")
-    )
-
-    gen_numbers = logs.select("gen")
-    min_fitness = logs.select("min")
-    max_fitness = logs.select("max")
-    mean_fitness = logs.select("avg")
-    final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value = temp
-    if not dry_run:
-        if tf is None:
-            tf = open(str(exp_cell) + str(model_value) + str(".tex"), "w")
-
-        tf.write("\subsubsection{" + str(exp_cell) + " " + str(model_value) + "}")
-        tf.write(
-            pd.DataFrame([{"chi_square": chi_sqr_opt, "p_value": p_value}]).T.to_latex()
-        )
-        best_params_frame = pd.DataFrame([opt.attrs])
-        tf.write("optimal model parameters")
-        tf.write(best_params_frame.to_latex())
-        try:
-            opt.make_pretty(opt.tests)
-
-            df = opt.obs_preds
-            tf.write(df.to_latex())
-        except:
-            tf.write("failed model")
-        os.system("cat " + str(exp_cell) + str(model_value) + str(".tex"))
-    results_dict = {}
-    results_dict["model_value"] = model_value
-    results_dict["exp_cell"] = exp_cell  # = {}
-    results_dict["chi_square"] = chi_sqr_opt
-    results_dict["p_value"] = p_value
-    df = pd.DataFrame([results_dict])
-
-    return df, results_dict, opt
-'''
 
 def inject_model_soma(
     dtc: DataTC, figname=None, solve_for_current=None, fixed: bool = False
@@ -722,106 +641,15 @@ def inject_model_soma(
         dtc.vm_soma = vm15
         del model
         return None, vm15, uc, None, dtc
-
-    if dtc.rheobase is None:
-        rt = RheobaseTest(observation={"mean": 0 * pq.pA})
-        rt.score_type = RelativeDifferenceScore
-        dtc.rheobase = rt.generate_prediction(dtc.dtc_to_model())
-        if dtc.rheobase is None:
-            return None, None, None, None, dtc
-    model = dtc.dtc_to_model()
-    if type(dtc.rheobase) is type(dict()):
-        if dtc.rheobase["value"] is None:
-            return None, None, None, None, dtc
-        else:
-            rheobase = dtc.rheobase["value"]
-    else:
-        rheobase = dtc.rheobase
-    model = dtc.dtc_to_model()
-    ALLEN_DELAY = 1000.0 * pq.ms
-    ALLEN_DURATION = 2000.0 * pq.ms
-    uc = {"amplitude": rheobase, "duration": ALLEN_DURATION, "delay": ALLEN_DELAY}
-    model._backend.inject_square_current(**uc)
-    dtc.vmrh = None
-    dtc.vmrh = model.get_membrane_potential()
-    del model
-    model = dtc.dtc_to_model()
-    ########
-    # A thing to note
-    # rheobase = 300 * pq.pA
-    # A thing to note
-    ########
-    if hasattr(dtc, "current_spike_number_search"):
-        from neuronunit.tests import SpikeCountSearch
-
-        observation_spike_count = {}
-        observation_spike_count["value"] = dtc.current_spike_number_search
-        scs = SpikeCountSearch(observation_spike_count)
-        assert model is not None
-        target_current = scs.generate_prediction(model)
-
-        uc = {
-            "amplitude": target_current,
-            "duration": ALLEN_DURATION,
-            "delay": ALLEN_DELAY,
-        }
-        model.inject_square_current(uc)
-        vm15 = model.get_membrane_potential()
-        dtc.vm_soma = vm15
-
-        del model
-        model = dtc.dtc_to_model()
-        uc = {"amplitude": 0 * pq.pA, "duration": ALLEN_DURATION, "delay": ALLEN_DELAY}
-        params = {
-            "amplitude": rheobase,
-            "duration": ALLEN_DURATION,
-            "delay": ALLEN_DELAY,
-        }
-        model.inject_square_current(uc)
-        vr = model.get_membrane_potential()
-        dtc.vmr = np.mean(vr)
-        del model
-        return vm30, vm15, params, None, dtc
-
-    else:
-
-        uc = {
-            "amplitude": 1.5 * rheobase,
-            "duration": ALLEN_DURATION,
-            "delay": ALLEN_DELAY,
-        }
-        model._backend.inject_square_current(**uc)
-        vm15 = model.get_membrane_potential()
-        dtc.vm_soma = vm15
-        del model
-        model = dtc.dtc_to_model()
-
-        uc = {
-            "amplitude": 3.0 * rheobase,
-            "duration": ALLEN_DURATION,
-            "delay": ALLEN_DELAY,
-        }
-        model._backend.inject_square_current(**uc)
-
-        vm30 = model.get_membrane_potential()
-        dtc.vm30 = copy.copy(vm30)
-        del model
-        model = dtc.dtc_to_model()
-        uc = {"amplitude": 00 * pq.pA, "duration": DURATION, "delay": DELAY}
-        params = {"amplitude": rheobase, "duration": DURATION, "delay": DELAY}
-        model._backend.inject_square_current(**uc)
-
-        vr = model.get_membrane_potential()
-        dtc.vmr = np.mean(vr)
-        del model
-        return [vm30, vm15, params, None, dtc]
-
-
-def efel_evaluation(instance_obj: Any, efel_filter_list: List = None,current:float=None) -> Any:
+def efel_evaluation(instance_obj: Any, efel_filter_iterable: Iterable = None,current:float=None) -> Any:
     """
     -- Synopsis: evaluate efel feature extraction criteria against on
     reduced cell models and probably efel data.
     """
+    if isinstance(efel_filter_iterable,type(dict())):
+        efel_filter_list = list(efel_filter_iterable.keys())
+    if isinstance(efel_filter_iterable,type(list())):
+        efel_filter_list = efel_filter_iterable
     vm_used = instance_obj.vm_soma
     try:
         efel.reset()
@@ -840,7 +668,7 @@ def efel_evaluation(instance_obj: Any, efel_filter_list: List = None,current:flo
     ALLEN_DELAY = 1000 * pq.ms
     trace3["stim_end"] = [float(ALLEN_DELAY) + float(ALLEN_DURATION)]
     trace3["stim_start"] = [float(ALLEN_DELAY)]
-    efel_list = list(efel.getFeatureNames())
+
     if np.min(vm_used.magnitude) < 0:
         if not np.max(vm_used.magnitude) > 0:
             vm_used_mag = [v + np.mean([0, float(np.max(v))]) * pq.mV for v in vm_used]
@@ -849,45 +677,53 @@ def efel_evaluation(instance_obj: Any, efel_filter_list: List = None,current:flo
                 return instance_obj
 
             trace3["V"] = vm_used_mag
-        if efel_filter_list is None:
-            print('activated')
-            efel_filter_list = [
-                "burst_ISI_indices",
-                "burst_mean_freq",
-                "burst_number",
-                "single_burst_ratio",
-                "ISI_log_slope",
-                "mean_frequency",
-                "adaptation_index2",
-                "first_isi",
-                "ISI_CV",
-                "median_isi",
-                "all_ISI_values",
-                "ISI_values",
-                "time_to_first_spike",
-                "time_to_last_spike",
-                "time_to_second_spike",
-                "Spikecount",
-                "peak_voltage",
-                "base_voltage",
-                "AHP_depth",
-                "AHP_depth_abs"]
+        if efel_filter_iterable is None:
 
+            default_efel_filter_iterable = {
+                "burst_ISI_indices":None,
+                "burst_mean_freq":pq.Hz,
+                "burst_number":None,
+                "single_burst_ratio":None,
+                "ISI_log_slope":None,
+                "mean_frequency":pq.Hz,
+                "adaptation_index2":None,
+                "first_isi":pq.ms,
+                "ISI_CV":None,
+                "median_isi":pq.ms,
+                "Spikecount":None,
+                "all_ISI_values":pq.ms,
+                "ISI_values":pq.ms,
+                "time_to_first_spike":pq.ms,
+                "time_to_last_spike":pq.ms,
+                "time_to_second_spike":pq.ms,
+                "peak_voltage":pq.mV,
+                "base_voltage":pq.mV,
+                "AHP_depth":pq.mV,
+                "AHP_depth_abs":pq.mV,
+                "base_voltage":pq.mV}
+            efel_filter_list = list(default_efel_filter_iterable.keys())
         results = efel.getMeanFeatureValues(
             [trace3], efel_filter_list, raise_warnings=False
         )
-        if "MAT" not in instance_obj.backend:
-            thresh_cross = threshold_detection(vm_used, 0 * pq.mV)
-            for index, tc in enumerate(thresh_cross):
+        #if "MAT" not in instance_obj.backend:
+        #    thresh_cross = threshold_detection(vm_used, 0 * pq.mV)
+        #    for index, tc in enumerate(thresh_cross):
+        #        results[0]["spike_" + str(index)] = float(tc)
+        #else:
+        if hasattr(instance_obj, "spikes"):
+            instance_obj.spikes = model._backend.spikes
+            for index, tc in enumerate(instance_obj.spikes):
                 results[0]["spike_" + str(index)] = float(tc)
-        else:
-            if hasattr(instance_obj, "spikes"):
-                instance_obj.spikes = model._backend.spikes
-                for index, tc in enumerate(instance_obj.spikes):
-                    results[0]["spike_" + str(index)] = float(tc)
-        nans = {k: v for k, v in results[0].items() if type(v) is type(None)}
         instance_obj.efel = None
         instance_obj.efel = results[0]
+        #print(instance_obj.efel.keys())
+        '''
+        if isinstance(efel_filter_iterable,type(dict())):
+            for k,v in instance_obj.efel.items():
+                units = efel_filter_iterable[k]
+                if units is not None and v is not None:
+                    instance_obj.efel[k] = v*units
+        '''
         efel.reset()
         assert hasattr(instance_obj,'efel')
     return instance_obj

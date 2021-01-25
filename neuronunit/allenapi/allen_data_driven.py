@@ -21,7 +21,6 @@ from neuronunit.allenapi import make_allen_tests_from_id
 from neuronunit.allenapi.make_allen_tests_from_id import *
 from neuronunit.allenapi.make_allen_tests import AllenTest
 
-# from neuronunit.optimization.optimization_management import check_bin_vm_soma,
 from neuronunit.optimization.optimization_management import inject_model_soma
 from neuronunit.tests import *
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
@@ -36,7 +35,7 @@ def opt_setup(
     cached=None,
     fixed_current=False,
     score_type=ZScore,
-    efel_filter_list=None
+    efel_filter_iterable=None
 ):
     #cached=None
     if cached is not None:
@@ -60,7 +59,7 @@ def opt_setup(
             suite,
             specimen_id,
         ) = make_allen_tests_from_id.make_suite_known_sweep_from_static_models(
-            vmm, stimulus, specimen_id,efel_filter_list
+            vmm, stimulus, specimen_id,efel_filter_iterable
         )
         with open(str(specimen_id) + "later_allen_NU_tests.p", "wb") as f:
             pickle.dump(suite, f)
@@ -80,10 +79,8 @@ def opt_setup(
     observation_range = {}
     observation_range["value"] = spk_count
     template_model.backend = model_type
-    template_model.allen = None
     template_model.allen = True
     template_model.NU = True
-
     if fixed_current:
         uc = {
             "amplitude": fixed_current,
@@ -107,7 +104,7 @@ def wrap_setups(
     fixed_current=False,
     cached=False,
     score_type=ZScore,
-    efel_filter_list=None
+    efel_filter_iterable=None
 ):
     '''
     if os.path.isfile("325479788later_allen_NU_tests.p"):
@@ -119,7 +116,7 @@ def wrap_setups(
             fixed_current=False,
             cached=False,
             score_type=score_type,
-            efel_filter_list=efel_filter_list
+            efel_filter_iterable=efel_filter_iterable
         )
     else:
     '''
@@ -131,14 +128,14 @@ def wrap_setups(
         fixed_current=False,
         cached=None,
         score_type=score_type,
-        efel_filter_list=efel_filter_list
+        efel_filter_iterable=efel_filter_iterable
     )
     template_model.seeded_current = target_current["value"]
     template_model.allen = True
     template_model.seeded_current
     template_model.NU = True
     template_model.backend = model_type
-    template_model.efel_filter_list = efel_filter_list
+    template_model.efel_filter_iterable = efel_filter_iterable
 
     cell_evaluator, template_model = opt_setup_two(
         model_type,
@@ -148,7 +145,7 @@ def wrap_setups(
         spk_count,
         template_model=template_model,
         score_type=score_type,
-        efel_filter_list=efel_filter_list
+        efel_filter_iterable=efel_filter_iterable
     )
     cell_evaluator.cell_model.params = BPO_PARAMS[model_type]
     assert cell_evaluator.cell_model is not None
@@ -226,7 +223,7 @@ def opt_setup_two(
     spk_count,
     template_model=None,
     score_type=ZScore,
-    efel_filter_list=None
+    efel_filter_iterable=None
 ):
     assert template_model.backend == model_type
     template_model.params = BPO_PARAMS[model_type]
@@ -254,7 +251,7 @@ def opt_setup_two(
         objectives.append(objective)
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
     template_model.params_by_names(BPO_PARAMS[template_model.backend].keys())
-    template_model.efel_filter_list = efel_filter_list
+    template_model.efel_filter_iterable = efel_filter_iterable
     cell_evaluator = ephys.evaluators.CellEvaluator(
         cell_model=template_model,
         param_names=list(BPO_PARAMS[template_model.backend].keys()),

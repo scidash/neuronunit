@@ -1,3 +1,5 @@
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
+
 import pickle
 import seaborn as sns
 import os
@@ -31,8 +33,9 @@ def opt_setup(
     cached=None,
     fixed_current=False,
     score_type=ZScore,
+    efel_filter_iterable=None
 ):
-    if cached is not None:
+    if cached:
         with open(str(specimen_id) + "later_allen_NU_tests.p", "rb") as f:
             suite = pickle.load(f)
 
@@ -53,7 +56,7 @@ def opt_setup(
             suite,
             specimen_id,
         ) = make_allen_tests_from_id.make_suite_known_sweep_from_static_models(
-            vmm, stimulus, specimen_id
+            vmm, stimulus, specimen_id,efel_filter_iterable=efel_filter_iterable
         )
         with open(str(specimen_id) + "later_allen_NU_tests.p", "wb") as f:
             pickle.dump(suite, f)
@@ -75,7 +78,6 @@ def opt_setup(
     observation_range = {}
     observation_range["value"] = spk_count
     template_model.backend = model_type
-    template_model.allen = None
     template_model.allen = True
     template_model.NU = True
     if fixed_current:
@@ -147,16 +149,18 @@ class NUFeatureAllenMultiSpike(object):
             prediction = {"value": np.mean(features[self.test.name])}
             score_gene = self.test.judge(responses["model"], prediction=prediction)
             if score_gene is not None:
-                if score_gene.log_norm_score is not None:
-                    delta = np.abs(float(score_gene.log_norm_score))
+                if self.test.score_type is RelativeDifferenceScore:
+                    if score_gene.log_norm_score is not None:
+                        delta = np.abs(float(score_gene.log_norm_score))
+                    else:
+                        delta = 1000.0
                 else:
-                    delta = 1000.0
+                    if score_gene.raw is not None:
+                        delta = np.abs(float(score_gene.raw))
+                    else:
+                        delta = 1000.0
             else:
                 delta = 1000.0
-            if np.nan == delta or delta == np.inf:
-                delta = np.abs(
-                    features[self.test.name] - np.mean(self.test.observation["mean"])
-                )
             if np.nan == delta or delta == np.inf:
                 delta = 1000.0
             return delta
@@ -177,11 +181,10 @@ def opt_setup_two(
     template_model.seeded_current = target_current["value"]
     template_model.spk_count = spk_count
     sweep_protocols = []
-    for protocol_name, amplitude in [("step1", 0.05)]:
-        protocol = ephys.protocols.SweepProtocol(protocol_name, [None], [None])
-        sweep_protocols.append(protocol)
+    protocol = ephys.protocols.NeuronUnitAllenStepProtocol('multi_spiking', [None], [None])
+    sweep_protocols.append(protocol)
     onestep_protocol = ephys.protocols.SequenceProtocol(
-        "onestep", protocols=sweep_protocols
+        'multi_spiking_wraper', protocols=sweep_protocols
     )
     objectives = []
     spike_obs = []
@@ -229,6 +232,7 @@ def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
         offspring_size=MU,
+        eta=5,
         map_function=map,
         selector_name="IBEA",
         mutpb=mutpb,
@@ -255,14 +259,15 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
         target.vm_soma = suite.traces["vm15"]
     opt.seeded_current = target_current["value"]
     opt.spk_count = spk_count
+    opt.attrs_to_params()
 
     target.seeded_current = target_current["value"]
     target.spk_count = spk_count
 
-    _, _, _, target = inject_model_soma(
+    _, _, _, _, target = inject_model_soma(
         target, solve_for_current=target_current["value"]
     )
-    _, _, _, opt = inject_model_soma(opt, solve_for_current=target_current["value"])
+    _, _, _, _, opt = inject_model_soma(opt, solve_for_current=target_current["value"])
     return opt, target
 
 

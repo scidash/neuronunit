@@ -55,10 +55,6 @@ class DataTC(object):
         self.backend = backend
         self._backend = _backend
         self.lookup = {}
-        #self.previous = 0
-        #self.run_number = 0
-        #self.boolean = False
-
         if self.backend is not None:
             if (
                 str("MAT") in self.backend
@@ -83,6 +79,13 @@ class DataTC(object):
         self.param = lop
         return lop
 
+    def attrs_to_params(self)->None:
+        self.params = self.attrs
+        for k,v in self.params.items():
+            if np.round(v, 2) != 0:
+                self.params[k] = np.round(v, 2)
+
+
     def make_pretty(self, tests) -> pd.DataFrame:
         import pandas as pd
         self.tests = tests
@@ -102,7 +105,7 @@ class DataTC(object):
             if not hasattr(t, "allen")
         }
         ##
-        # This step only partially undoes quantities sins.
+        # This step only partially undoes quantities annoyances.
         ##
         qt.quantity.PREFERRED = [qt.mV, qt.pA, qt.MOhm, qt.ms, qt.pF, qt.Hz / qt.pA]
 

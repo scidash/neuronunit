@@ -1,23 +1,26 @@
 #!/usr/bin/env python
 # coding: utf-8
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
 
-from neuronunit.optimization.model_parameters import MODEL_PARAMS
-import pickle
-import numpy as np
 from allensdk.core.cell_types_cache import CellTypesCache
 from allensdk.ephys.extract_cell_features import extract_cell_features
-from collections import defaultdict
 from allensdk.core.nwb_data_set import NwbDataSet
-from neuronunit.optimization.optimization_management import efel_evaluation
+
+from collections import defaultdict
 import numpy as np
-from neuronunit.tests.make_allen_tests import AllenTest
-from sciunit import TestSuite
 import matplotlib.pyplot as plt
+import pickle
+
+from sciunit import TestSuite
+
+from neuronunit.optimization.model_parameters import MODEL_PARAMS
+from neuronunit.optimization.optimization_management import efel_evaluation
 from neuronunit.models import StaticModel
+from neuronunit.tests.make_allen_tests import AllenTest
 
 from neuronunit.tests.target_spike_current import SpikeCountSearch
 from neuronunit.optimization.data_transport_container import DataTC
-from neuronunit.optimization.optimization_management import dtc_to_rheo#, rekeyed
+from neuronunit.optimization.optimization_management import dtc_to_rheo
 from neo.core import AnalogSignal
 import quantities as qt
 
@@ -25,7 +28,7 @@ import quantities as qt
 from elephant.spike_train_generation import threshold_detection
 
 
-def allen_id_to_sweeps(specimen_id):
+def allen_id_to_sweeps(specimen_id:int=-1)->Union[defaultdict,Any,List]:
     ctc = CellTypesCache(manifest_file="cell_types/manifest.json")
 
     specimen_id = int(specimen_id)
@@ -46,7 +49,6 @@ def closest(lst, K):
 from elephant.statistics import isi
 from sklearn.linear_model import LinearRegression
 
-# def make_slope():
 
 
 def sweeps_build_fi_tests(data_set, sweep_numbers, specimen_id):
@@ -172,7 +174,7 @@ def get_model_parts(data_set, sweep_numbers, specimen_id):
     return vm15, vm30, rheobase, currents, vmrh
 
 
-def get_model_parts_sweep_from_spk_cnt(spk_cnt, data_set, sweep_numbers, specimen_id):
+def get_model_parts_sweep_from_spk_cnt(int:spk_cnt=-1, data_set, sweep_numbers, int:specimen_id=-1):
     sweep_numbers = sweep_numbers["Square - 2s Suprathreshold"]
     rheobase = -1
     above_threshold_sn = []
@@ -184,6 +186,7 @@ def get_model_parts_sweep_from_spk_cnt(spk_cnt, data_set, sweep_numbers, specime
             sweep_data = data_set.get_sweep(sn)
             stimulus = sweep_data["stimulus"]
             reponse = sweep_data["response"]
+
             if len(spike_times):
                 thresh_ = len(np.where(reponse > 0))
 
@@ -197,7 +200,6 @@ def get_model_parts_sweep_from_spk_cnt(spk_cnt, data_set, sweep_numbers, specime
             vmm = vmm[0 : int(len(vmm) / 2.1)]
             vmm.sn = None
             vmm.sn = sn
-
             return vmm, stimulus, sn, spike_times
     return None, None, None, None
 
@@ -224,22 +226,19 @@ def get_model_parts_sweep_from_number(sn, data_set, sweep_numbers, specimen_id):
     return vmm, stimulus, sn, spike_times
 
 
-def make_suite_known_sweep_from_static_models(vm_soma, stimulus, specimen_id,efel_filter_list=None):
+def make_suite_known_sweep_from_static_models(vm_soma, stimulus, specimen_id,efel_filter_iterable=None):
     sm = StaticModel(vm=vm_soma)
     sm.backend = "static_model"
     sm.vm_soma = vm_soma
-    sm.rheobase = np.max(stimulus)
-    sm = efel_evaluation(sm,current=np.max(stimulus),efel_filter_list=efel_filter_list)
-    useable = False
-    sm.vmrh = vm_soma
+    sm = efel_evaluation(sm,current=np.max(stimulus),efel_filter_iterable=efel_filter_iterable)
     allen_tests = []
     if sm.efel is not None:
         for k, v in sm.efel.items():
             try:
+            #if v is not None:
                 at = AllenTest(name=str(k))
                 at.set_observation(v)
                 at = wrangle_tests(at)
-
                 allen_tests.append(at)
             except:
                 pass
@@ -247,13 +246,14 @@ def make_suite_known_sweep_from_static_models(vm_soma, stimulus, specimen_id,efe
     suite.traces = None
     suite.traces = {}
     suite.traces["vm_soma"] = sm.vm_soma
-    suite.model = None
-    suite.useable = None
-    suite.useable = useable
+
     suite.model = sm
-    suite.stim = None
     suite.stim = stimulus
     return suite, specimen_id
+    #suite.model = None
+    #suite.useable = None
+    #suite.useable = useable
+    #suite.stim = None
 
 
 def wrangle_tests(t):
@@ -286,9 +286,6 @@ def make_suite_from_static_models(vm_soma, vm30, rheobase, currents, vmrh, speci
     sm.vmrh = vmrh
     allen_tests = []
 
-    ##
-    # Not here deliberate misleading naming
-    ##
     if sm.efel is not None:
         for k, v in sm.efel.items():
             try:
@@ -309,9 +306,9 @@ def make_suite_from_static_models(vm_soma, vm30, rheobase, currents, vmrh, speci
     ##
     suite.traces["vm_soma"] = sm.vm_soma
     suite.model = None
-    suite.useable = None
+    #suite.useable = None
 
-    suite.useable = useable
+    #suite.useable = useable
     suite.model = sm
     suite.stim = None
     suite.stim = currents
