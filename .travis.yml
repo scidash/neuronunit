@@ -34,8 +34,7 @@ script:
                        # variable set to pass.
   - cd neuronunit/unit_test; python -m unittest scores_unit_test.py; cd -;
   - cd neuronunit/unit_test; coverage run rheobase_dtc_test.py; cd -;
-  - cd neuronunit/unit_test; coverage run adexp_opt.py; cd -;
-  - cd neuronunit/unit_test; coverage run izhi_opt.py; cd -;
+  - cd neuronunit/unit_test; python -m adexp_opt.py; cd -;
   - sh test.sh
 after_success:
   - coveralls
