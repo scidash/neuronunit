@@ -20,14 +20,17 @@ from sciunit import TestSuite
 from sciunit.scores import ZScore
 from sciunit.scores.collections import ScoreArray
 
+from neuronunit.tests import SpikeCountSearch
 from neuronunit.allenapi import make_allen_tests_from_id
 from neuronunit.allenapi.make_allen_tests_from_id import *
 from neuronunit.allenapi.make_allen_tests import AllenTest
-
 from neuronunit.optimization.optimization_management import inject_model_soma
 from neuronunit.optimization.model_parameters import BPO_PARAMS
 
-def match_current_amp_to_model_param(spk_count,model_type,template_model):
+def match_current_amp_to_model_param(spk_count,
+                                    model_type,
+                                    template_model,
+                                    fixed_current):
     observation_range = {}
     observation_range["value"] = spk_count
     template_model.backend = model_type
@@ -96,7 +99,10 @@ def opt_setup(
             spk_count = float(t.observation["mean"])
             break
 
-    target_current = match_current_amp_to_model_param(spk_count,model_type,template_model)
+    target_current = match_current_amp_to_model_param(spk_count,
+                            model_type,
+                            template_model,
+                            fixed_current)
     template_model.seeded_current = target_current["value"]
 
     cell_evaluator, template_model = opt_setup_two(
