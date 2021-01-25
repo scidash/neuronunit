@@ -19,7 +19,7 @@ class DataTC(object):
         can be cheaply transported across HOSTS/CPUs
     """
 
-    def model_default(self)->None:
+    def model_default(self) -> None:
         if self.backend is not None:
             if self.attrs is None:
                 from neuronunit.optimization.model_parameters import (
@@ -47,7 +47,6 @@ class DataTC(object):
                 del model
             return None
 
-
     def __init__(self, attrs=None, backend=None, _backend=None):
         self.rheobase = None
         self.attrs = attrs
@@ -70,8 +69,9 @@ class DataTC(object):
         else:
             self.attrs = attrs
 
-    def to_bpo_param(self, attrs:dict={})->dict:
+    def to_bpo_param(self, attrs: dict = {}) -> dict:
         from bluepyopt.parameters import Parameter
+
         lop = {}
         for k, v in attrs.items():
             p = Parameter(name=k, bounds=v, frozen=False)
@@ -79,20 +79,18 @@ class DataTC(object):
         self.param = lop
         return lop
 
-    def attrs_to_params(self)->None:
+    def attrs_to_params(self) -> None:
         self.params = self.attrs
-        for k,v in self.params.items():
+        for k, v in self.params.items():
             if np.round(v, 2) != 0:
                 self.params[k] = np.round(v, 2)
 
-
     def make_pretty(self, tests) -> pd.DataFrame:
         import pandas as pd
+
         self.tests = tests
         self.obs_preds = pd.DataFrame(columns=["observations", "predictions"])
-        holding_obs = {
-            t.name: t.observation["mean"] for t in self.tests
-        }
+        holding_obs = {t.name: t.observation["mean"] for t in self.tests}
         grab_keys = []
         for t in self.tests:
             if "value" in t.prediction.keys():
@@ -144,7 +142,7 @@ class DataTC(object):
             scores_ = []
             model = self.dtc_to_model()
             for t in self.tests:
-                scores_.append(t.judge(model,prediction=t.prediction))
+                scores_.append(t.judge(model, prediction=t.prediction))
 
             not_SA = {
                 t.name: np.round(score.raw, 2) for t, score in zip(self.tests, scores_)
@@ -152,11 +150,11 @@ class DataTC(object):
             temp_scores = pd.DataFrame([not_SA], index=["Z-Scores"])
             self.obs_preds = pd.concat([temp_obs, temp_preds, temp_scores])
         except:
-            self.obs_preds = pd.concat([temp_obs, temp_preds])#, temp_scores])
+            self.obs_preds = pd.concat([temp_obs, temp_preds])  # , temp_scores])
         self.obs_preds = self.obs_preds.T
         return self.obs_preds
 
-    '''
+    """
     def dtc_to_opt_man(self):
         from neuronunit.optimization.optimization_management import OptMan
         from collections import OrderedDict
@@ -173,7 +171,8 @@ class DataTC(object):
         OM = self.dtc_to_opt_man()
         self = OM.get_agreement(self)
         return self
-    '''
+    """
+
     def add_constant(self):
         if self.constants is not None:
             self.attrs.update(self.constants)

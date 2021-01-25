@@ -4,7 +4,9 @@ import numpy as np
 from allensdk.core.cell_types_cache import CellTypesCache
 from neuronunit.optimization.data_transport_container import DataTC
 
-from neuronunit.optimization.optimization_management import multi_spiking_feature_extraction
+from neuronunit.optimization.optimization_management import (
+    multi_spiking_feature_extraction,
+)
 from sciunit.scores import RelativeDifferenceScore
 
 

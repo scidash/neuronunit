@@ -28,7 +28,7 @@ import quantities as qt
 from elephant.spike_train_generation import threshold_detection
 
 
-def allen_id_to_sweeps(specimen_id:int=-1)->Union[defaultdict,Any,List]:
+def allen_id_to_sweeps(specimen_id: int = -1) -> Union[defaultdict, Any, List]:
     ctc = CellTypesCache(manifest_file="cell_types/manifest.json")
 
     specimen_id = int(specimen_id)
@@ -48,7 +48,6 @@ def closest(lst, K):
 
 from elephant.statistics import isi
 from sklearn.linear_model import LinearRegression
-
 
 
 def sweeps_build_fi_tests(data_set, sweep_numbers, specimen_id):
@@ -149,9 +148,7 @@ def get_model_parts(data_set, sweep_numbers, specimen_id):
             above_threshold_sn.append((np.max(stimulus), sn, vmm))
     if rheobase == -1:
         rheobase = above_threshold_sn[0][0]
-        vmrh = above_threshold_sn[0][
-            2
-        ]
+        vmrh = above_threshold_sn[0][2]
     myNumber = 3.0 * rheobase
     currents_ = [t[0] for t in above_threshold_sn]
     indexvm30 = closest(currents_, myNumber)
@@ -174,7 +171,9 @@ def get_model_parts(data_set, sweep_numbers, specimen_id):
     return vm15, vm30, rheobase, currents, vmrh
 
 
-def get_model_parts_sweep_from_spk_cnt(int:spk_cnt=-1, data_set, sweep_numbers, int:specimen_id=-1):
+def get_model_parts_sweep_from_spk_cnt(
+    int: spk_cnt, data_set, sweep_numbers, int: specimen_id
+):
     sweep_numbers = sweep_numbers["Square - 2s Suprathreshold"]
     rheobase = -1
     above_threshold_sn = []
@@ -190,7 +189,6 @@ def get_model_parts_sweep_from_spk_cnt(int:spk_cnt=-1, data_set, sweep_numbers, 
             if len(spike_times):
                 thresh_ = len(np.where(reponse > 0))
 
-
             sampling_rate = sweep_data["sampling_rate"]
             vmm = AnalogSignal(
                 [v * 1000 for v in reponse],
@@ -202,7 +200,6 @@ def get_model_parts_sweep_from_spk_cnt(int:spk_cnt=-1, data_set, sweep_numbers, 
             vmm.sn = sn
             return vmm, stimulus, sn, spike_times
     return None, None, None, None
-
 
 
 def get_model_parts_sweep_from_number(sn, data_set, sweep_numbers, specimen_id):
@@ -226,16 +223,20 @@ def get_model_parts_sweep_from_number(sn, data_set, sweep_numbers, specimen_id):
     return vmm, stimulus, sn, spike_times
 
 
-def make_suite_known_sweep_from_static_models(vm_soma, stimulus, specimen_id,efel_filter_iterable=None):
+def make_suite_known_sweep_from_static_models(
+    vm_soma, stimulus, specimen_id, efel_filter_iterable=None
+):
     sm = StaticModel(vm=vm_soma)
     sm.backend = "static_model"
     sm.vm_soma = vm_soma
-    sm = efel_evaluation(sm,current=np.max(stimulus),efel_filter_iterable=efel_filter_iterable)
+    sm = efel_evaluation(
+        sm, current=np.max(stimulus), efel_filter_iterable=efel_filter_iterable
+    )
     allen_tests = []
     if sm.efel is not None:
         for k, v in sm.efel.items():
             try:
-            #if v is not None:
+                # if v is not None:
                 at = AllenTest(name=str(k))
                 at.set_observation(v)
                 at = wrangle_tests(at)
@@ -250,10 +251,10 @@ def make_suite_known_sweep_from_static_models(vm_soma, stimulus, specimen_id,efe
     suite.model = sm
     suite.stim = stimulus
     return suite, specimen_id
-    #suite.model = None
-    #suite.useable = None
-    #suite.useable = useable
-    #suite.stim = None
+    # suite.model = None
+    # suite.useable = None
+    # suite.useable = useable
+    # suite.stim = None
 
 
 def wrangle_tests(t):
@@ -278,8 +279,7 @@ def make_suite_from_static_models(vm_soma, vm30, rheobase, currents, vmrh, speci
         sm = StaticModel(vm=vm30)
     sm.rheobase = rheobase
     sm.vm_soma = vm_soma
-    sm = efel_evaluation(sm,current=rheobase)
-
+    sm = efel_evaluation(sm, current=rheobase)
 
     sm = rekeyed(sm)
     useable = False
@@ -306,9 +306,9 @@ def make_suite_from_static_models(vm_soma, vm30, rheobase, currents, vmrh, speci
     ##
     suite.traces["vm_soma"] = sm.vm_soma
     suite.model = None
-    #suite.useable = None
+    # suite.useable = None
 
-    #suite.useable = useable
+    # suite.useable = useable
     suite.model = sm
     suite.stim = None
     suite.stim = currents

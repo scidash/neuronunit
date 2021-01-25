@@ -33,7 +33,7 @@ def opt_setup(
     cached=None,
     fixed_current=False,
     score_type=ZScore,
-    efel_filter_iterable=None
+    efel_filter_iterable=None,
 ):
     if cached:
         with open(str(specimen_id) + "later_allen_NU_tests.p", "rb") as f:
@@ -56,7 +56,7 @@ def opt_setup(
             suite,
             specimen_id,
         ) = make_allen_tests_from_id.make_suite_known_sweep_from_static_models(
-            vmm, stimulus, specimen_id,efel_filter_iterable=efel_filter_iterable
+            vmm, stimulus, specimen_id, efel_filter_iterable=efel_filter_iterable
         )
         with open(str(specimen_id) + "later_allen_NU_tests.p", "wb") as f:
             pickle.dump(suite, f)
@@ -181,10 +181,12 @@ def opt_setup_two(
     template_model.seeded_current = target_current["value"]
     template_model.spk_count = spk_count
     sweep_protocols = []
-    protocol = ephys.protocols.NeuronUnitAllenStepProtocol('multi_spiking', [None], [None])
+    protocol = ephys.protocols.NeuronUnitAllenStepProtocol(
+        "multi_spiking", [None], [None]
+    )
     sweep_protocols.append(protocol)
     onestep_protocol = ephys.protocols.SequenceProtocol(
-        'multi_spiking_wraper', protocols=sweep_protocols
+        "multi_spiking_wraper", protocols=sweep_protocols
     )
     objectives = []
     spike_obs = []
@@ -212,7 +214,8 @@ def opt_setup_two(
     assert cell_evaluator.cell_model is not None
     return cell_evaluator, template_model
 
-'''
+
+"""
 def multi_layered(MU, NGEN, mapping_funct, cell_evaluator2):
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator2,
@@ -225,7 +228,8 @@ def multi_layered(MU, NGEN, mapping_funct, cell_evaluator2):
     )
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
     return final_pop, hall_of_fame, logs, hist
-'''
+"""
+
 
 def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
 
@@ -238,7 +242,7 @@ def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
         mutpb=mutpb,
         cxpb=cxpb,
         ELITISM=True,
-        NEURONUNIT=True
+        NEURONUNIT=True,
     )
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
     return final_pop, hall_of_fame, logs, hist

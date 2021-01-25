@@ -35,9 +35,9 @@ def opt_setup(
     cached=None,
     fixed_current=False,
     score_type=ZScore,
-    efel_filter_iterable=None
+    efel_filter_iterable=None,
 ):
-    #cached=None
+    # cached=None
     if cached is not None:
         with open(str(specimen_id) + "later_allen_NU_tests.p", "rb") as f:
             suite = pickle.load(f)
@@ -59,7 +59,7 @@ def opt_setup(
             suite,
             specimen_id,
         ) = make_allen_tests_from_id.make_suite_known_sweep_from_static_models(
-            vmm, stimulus, specimen_id,efel_filter_iterable
+            vmm, stimulus, specimen_id, efel_filter_iterable
         )
         with open(str(specimen_id) + "later_allen_NU_tests.p", "wb") as f:
             pickle.dump(suite, f)
@@ -104,9 +104,9 @@ def wrap_setups(
     fixed_current=False,
     cached=False,
     score_type=ZScore,
-    efel_filter_iterable=None
+    efel_filter_iterable=None,
 ):
-    '''
+    """
     if os.path.isfile("325479788later_allen_NU_tests.p"):
         template_model, suite, nu_tests, target_current, spk_count = opt_setup(
             specimen_id,
@@ -119,7 +119,7 @@ def wrap_setups(
             efel_filter_iterable=efel_filter_iterable
         )
     else:
-    '''
+    """
     template_model, suite, nu_tests, target_current, spk_count = opt_setup(
         specimen_id,
         model_type,
@@ -128,7 +128,7 @@ def wrap_setups(
         fixed_current=False,
         cached=None,
         score_type=score_type,
-        efel_filter_iterable=efel_filter_iterable
+        efel_filter_iterable=efel_filter_iterable,
     )
     template_model.seeded_current = target_current["value"]
     template_model.allen = True
@@ -145,7 +145,7 @@ def wrap_setups(
         spk_count,
         template_model=template_model,
         score_type=score_type,
-        efel_filter_iterable=efel_filter_iterable
+        efel_filter_iterable=efel_filter_iterable,
     )
     cell_evaluator.cell_model.params = BPO_PARAMS[model_type]
     assert cell_evaluator.cell_model is not None
@@ -175,7 +175,7 @@ class NUFeatureAllenMultiSpike(object):
         self.test.score_type = self.score_type
         feature_name = self.test.name
         if feature_name not in features.keys():
-            #print(self.test.name)
+            # print(self.test.name)
             return 1000.0
 
         if features[feature_name] is None:
@@ -209,7 +209,7 @@ class NUFeatureAllenMultiSpike(object):
                 delta = np.abs(float(score_gene.raw))
             if np.nan == delta or delta == np.inf:
                 delta = 1000.0
-            #if delta == 1000.0:
+            # if delta == 1000.0:
             #    print(self.test.name)
 
             return delta
@@ -223,7 +223,7 @@ def opt_setup_two(
     spk_count,
     template_model=None,
     score_type=ZScore,
-    efel_filter_iterable=None
+    efel_filter_iterable=None,
 ):
     assert template_model.backend == model_type
     template_model.params = BPO_PARAMS[model_type]
@@ -231,7 +231,7 @@ def opt_setup_two(
     template_model.seeded_current = target_current["value"]
     template_model.spk_count = spk_count
     sweep_protocols = []
-    protocol = ephys.protocols.NeuronUnitAllenStepProtocol('onestep', [None], [None])
+    protocol = ephys.protocols.NeuronUnitAllenStepProtocol("onestep", [None], [None])
     sweep_protocols.append(protocol)
     onestep_protocol = ephys.protocols.SequenceProtocol(
         "onestep", protocols=sweep_protocols
@@ -262,7 +262,8 @@ def opt_setup_two(
     assert cell_evaluator.cell_model is not None
     return cell_evaluator, template_model
 
-'''
+
+"""
 def multi_layered(MU, NGEN, mapping_funct, cell_evaluator2):
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator2,
@@ -275,7 +276,8 @@ def multi_layered(MU, NGEN, mapping_funct, cell_evaluator2):
     )
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
     return final_pop, hall_of_fame, logs, hist
-'''
+"""
+
 
 def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
 
@@ -287,7 +289,7 @@ def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
         mutpb=mutpb,
         cxpb=cxpb,
         ELITISM=True,
-        NEURONUNIT=True
+        NEURONUNIT=True,
     )
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
     return final_pop, hall_of_fame, logs, hist
@@ -301,8 +303,10 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
     obs_preds = []
 
     for t in tests:
-        scores.append(t.judge(model,prediction=t.prediction))
-        obs_preds.append((t.name,t.observation['mean'],t.prediction['mean'],scores[-1]))
+        scores.append(t.judge(model, prediction=t.prediction))
+        obs_preds.append(
+            (t.name, t.observation["mean"], t.prediction["mean"], scores[-1])
+        )
     df = pd.DataFrame(obs_preds)
 
     opt = model.model_to_dtc()
@@ -323,7 +327,9 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
     )
     _, _, _, _, opt = inject_model_soma(opt, solve_for_current=target_current["value"])
 
-    return opt, target,scores,obs_preds,df
+    return opt, target, scores, obs_preds, df
+
+
 def make_allen_hard_coded_complete():
     """
     Manually specificy 4-5
@@ -408,7 +414,7 @@ def make_allen_hard_coded_complete():
     allen_tests = [rt, tc, rp, ir]
     for t in allen_tests:
         t.score_type = RelativeDifferenceScore
-    #allen_tests[-1].score_type = ZScore
+    # allen_tests[-1].score_type = ZScore
     allen_suite482493761 = TestSuite(allen_tests)
     allen_suite482493761.name = (
         "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/482493761"
@@ -448,7 +454,7 @@ def make_allen_hard_coded_complete():
                 observations[k1] = np.round(vsd[k1].observation["mean"], 2)
                 observations["name"] = k
         list_of_dicts.append(observations)
-    df = pd.DataFrame(list_of_dicts,index=cells.keys())
+    df = pd.DataFrame(list_of_dicts, index=cells.keys())
     df
 
     return (

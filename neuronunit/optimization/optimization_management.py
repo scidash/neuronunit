@@ -2,7 +2,8 @@
 # but it calls many modules that are, such that it needs to pre-empt
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
 from sciunit.utils import config_set
-config_set('PREVALIDATE', False)
+
+config_set("PREVALIDATE", False)
 
 import dask
 from tqdm import tqdm
@@ -15,6 +16,7 @@ if SILENT:
     warnings.filterwarnings("ignore")
 
 import numpy, time
+
 try:
     import efel
 except:
@@ -40,6 +42,7 @@ import bluepyopt as bpop
 import bluepyopt.ephys as ephys
 from bluepyopt.parameters import Parameter
 import quantities as pq
+
 PASSIVE_DURATION = 500.0 * pq.ms
 PASSIVE_DELAY = 200.0 * pq.ms
 from elephant.spike_train_generation import threshold_detection
@@ -107,6 +110,7 @@ class TSD(dict):
         del self.DO
         return {k: v for k, v in self.items()}
 
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def random_p(model_type):
@@ -171,10 +175,7 @@ def write_opt_to_nml(path, param_dict) -> None:
     return
 
 
-
-def get_rh(dtc:DataTC,
-            rtest_class:RheobaseTest,
-            bind_vm:bool=False) -> DataTC:
+def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
     """
     --args:
         :param object dtc:
@@ -204,14 +205,15 @@ def get_rh(dtc:DataTC,
     return dtc
 
 
-def get_new_rtest(dtc:DataTC)->RheobaseTest:
+def get_new_rtest(dtc: DataTC) -> RheobaseTest:
     place_holder = {"mean": 10 * pq.pA}
     f = RheobaseTest
     rtest = f(observation=place_holder, name="RheobaseTest")
     rtest.score_type = RelativeDifferenceScore
     return rtest
 
-def get_rtest(dtc: DataTC)->RheobaseTest:
+
+def get_rtest(dtc: DataTC) -> RheobaseTest:
     if not hasattr(dtc, "tests"):
         rtest = get_new_rtest(dtc)
     else:
@@ -298,9 +300,9 @@ def train_length(dtc: DataTC) -> DataTC:
     return dtc
 
 
-def multi_spiking_feature_extraction(dtc:DataTC,
-        solve_for_current:bool=None,
-        efel_filter_iterable:List=None)->DataTC:
+def multi_spiking_feature_extraction(
+    dtc: DataTC, solve_for_current: bool = None, efel_filter_iterable: List = None
+) -> DataTC:
     """
     Perform multi spiking feature extraction
     via EFEL because its fast
@@ -309,14 +311,14 @@ def multi_spiking_feature_extraction(dtc:DataTC,
         _, _, _, _, dtc = inject_model_soma(dtc)
         if dtc.vm_soma is None:
             return dtc
-        dtc = efel_evaluation(dtc,efel_filter_iterable)
+        dtc = efel_evaluation(dtc, efel_filter_iterable)
         dtc.vm_soma = None
     else:
         _, _, _, _, dtc = inject_model_soma(dtc, solve_for_current=solve_for_current)
         if dtc.vm_soma is None:
             return dtc
-        dtc = efel_evaluation(dtc,efel_filter_iterable)
-    if hasattr(dtc,'efel'):
+        dtc = efel_evaluation(dtc, efel_filter_iterable)
+    if hasattr(dtc, "efel"):
         if dtc.efel is not None:
             dtc = train_length(dtc)
 
@@ -325,7 +327,8 @@ def multi_spiking_feature_extraction(dtc:DataTC,
 
     return dtc
 
-'''
+
+"""
 def rekeyed(dtc: Any = object()) -> Any:
     rekey = {}
     if hasattr(dtc, "allen_30"):
@@ -345,7 +348,8 @@ def rekeyed(dtc: Any = object()) -> Any:
             rekey = None
     dtc.everything = rekey
     return dtc
-'''
+"""
+
 
 def constrain_ahp(vm_used: Any = object()) -> dict:
     efel.reset()
@@ -359,7 +363,9 @@ def constrain_ahp(vm_used: Any = object()) -> dict:
     trace3["stim_end"] = [float(DELAY) + float(DURATION)]
     trace3["stim_start"] = [float(DELAY)]
     simple_ahp_constraint_list = ["AHP_depth", "AHP_depth_abs", "AHP_depth_last"]
-    results = efel.getMeanFeatureValues([trace3], simple_ahp_constraint_list, raise_warnings=False)
+    results = efel.getMeanFeatureValues(
+        [trace3], simple_ahp_constraint_list, raise_warnings=False
+    )
     return results
 
 
@@ -541,7 +547,7 @@ def _opt_(
         mutpb=mut,
         cxpb=cxp,
         NEURONUNIT=True,
-        ELITISM=True
+        ELITISM=True,
     )
 
     final_pop, hall_of_fame, logs, hist = optimization.run(max_ngen=NGEN)
@@ -554,17 +560,20 @@ def _opt_(
     obs_preds = []
     scores = []
     for t in tests:
-        scores.append(t.judge(model,prediction=t.prediction))
-        if 'mean' in t.observation.keys():
-            if 'mean' in t.prediction.keys():
-                obs_preds.append((t.name,t.observation['mean'],t.prediction['mean'],scores[-1]))
-            if 'value' in t.prediction.keys():
-                obs_preds.append((t.name,t.observation['mean'],t.prediction['value'],scores[-1]))
+        scores.append(t.judge(model, prediction=t.prediction))
+        if "mean" in t.observation.keys():
+            if "mean" in t.prediction.keys():
+                obs_preds.append(
+                    (t.name, t.observation["mean"], t.prediction["mean"], scores[-1])
+                )
+            if "value" in t.prediction.keys():
+                obs_preds.append(
+                    (t.name, t.observation["mean"], t.prediction["value"], scores[-1])
+                )
         else:
-            obs_preds.append((t.name,t.observation,t.prediction,scores[-1]))
+            obs_preds.append((t.name, t.observation, t.prediction, scores[-1]))
 
     df = pd.DataFrame(obs_preds)
-
 
     model.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
@@ -575,7 +584,18 @@ def _opt_(
     }
     df = opt.make_pretty(tests=tests)
     best_fit_val = best_ind.fitness.values
-    return final_pop, hall_of_fame, logs, hist, best_ind, best_fit_val, opt,obs_preds,df
+    return (
+        final_pop,
+        hall_of_fame,
+        logs,
+        hist,
+        best_ind,
+        best_fit_val,
+        opt,
+        obs_preds,
+        df,
+    )
+
 
 def public_opt(
     constraints,
@@ -585,17 +605,20 @@ def public_opt(
     MU,
     NGEN,
     diversity,
-    score_type=RelativeDifferenceScore
+    score_type=RelativeDifferenceScore,
 ):
-    _,_,_,_,_,_,opt,obs_preds,df = _opt_(constraints=constraints,
-    PARAMS=PARAMS,
-    test_key=test_key,
-    model_value=model_value,
-    MU=MU,
-    NGEN=NGEN,
-    diversity=diversity,
-    score_type=score_type)
-    return opt,obs_preds,df
+    _, _, _, _, _, _, opt, obs_preds, df = _opt_(
+        constraints=constraints,
+        PARAMS=PARAMS,
+        test_key=test_key,
+        model_value=model_value,
+        MU=MU,
+        NGEN=NGEN,
+        diversity=diversity,
+        score_type=score_type,
+    )
+    return opt, obs_preds, df
+
 
 def inject_model_soma(
     dtc: DataTC, figname=None, solve_for_current=None, fixed: bool = False
@@ -641,14 +664,18 @@ def inject_model_soma(
         dtc.vm_soma = vm15
         del model
         return None, vm15, uc, None, dtc
-def efel_evaluation(instance_obj: Any, efel_filter_iterable: Iterable = None,current:float=None) -> Any:
+
+
+def efel_evaluation(
+    instance_obj: Any, efel_filter_iterable: Iterable = None, current: float = None
+) -> Any:
     """
     -- Synopsis: evaluate efel feature extraction criteria against on
     reduced cell models and probably efel data.
     """
-    if isinstance(efel_filter_iterable,type(dict())):
+    if isinstance(efel_filter_iterable, type(dict())):
         efel_filter_list = list(efel_filter_iterable.keys())
-    if isinstance(efel_filter_iterable,type(list())):
+    if isinstance(efel_filter_iterable, type(list())):
         efel_filter_list = efel_filter_iterable
     vm_used = instance_obj.vm_soma
     try:
@@ -680,52 +707,53 @@ def efel_evaluation(instance_obj: Any, efel_filter_iterable: Iterable = None,cur
         if efel_filter_iterable is None:
 
             default_efel_filter_iterable = {
-                "burst_ISI_indices":None,
-                "burst_mean_freq":pq.Hz,
-                "burst_number":None,
-                "single_burst_ratio":None,
-                "ISI_log_slope":None,
-                "mean_frequency":pq.Hz,
-                "adaptation_index2":None,
-                "first_isi":pq.ms,
-                "ISI_CV":None,
-                "median_isi":pq.ms,
-                "Spikecount":None,
-                "all_ISI_values":pq.ms,
-                "ISI_values":pq.ms,
-                "time_to_first_spike":pq.ms,
-                "time_to_last_spike":pq.ms,
-                "time_to_second_spike":pq.ms,
-                "peak_voltage":pq.mV,
-                "base_voltage":pq.mV,
-                "AHP_depth":pq.mV,
-                "AHP_depth_abs":pq.mV,
-                "base_voltage":pq.mV}
+                "burst_ISI_indices": None,
+                "burst_mean_freq": pq.Hz,
+                "burst_number": None,
+                "single_burst_ratio": None,
+                "ISI_log_slope": None,
+                "mean_frequency": pq.Hz,
+                "adaptation_index2": None,
+                "first_isi": pq.ms,
+                "ISI_CV": None,
+                "median_isi": pq.ms,
+                "Spikecount": None,
+                "all_ISI_values": pq.ms,
+                "ISI_values": pq.ms,
+                "time_to_first_spike": pq.ms,
+                "time_to_last_spike": pq.ms,
+                "time_to_second_spike": pq.ms,
+                "peak_voltage": pq.mV,
+                "base_voltage": pq.mV,
+                "AHP_depth": pq.mV,
+                "AHP_depth_abs": pq.mV,
+                "base_voltage": pq.mV,
+            }
             efel_filter_list = list(default_efel_filter_iterable.keys())
         results = efel.getMeanFeatureValues(
             [trace3], efel_filter_list, raise_warnings=False
         )
-        #if "MAT" not in instance_obj.backend:
+        # if "MAT" not in instance_obj.backend:
         #    thresh_cross = threshold_detection(vm_used, 0 * pq.mV)
         #    for index, tc in enumerate(thresh_cross):
         #        results[0]["spike_" + str(index)] = float(tc)
-        #else:
+        # else:
         if hasattr(instance_obj, "spikes"):
             instance_obj.spikes = model._backend.spikes
             for index, tc in enumerate(instance_obj.spikes):
                 results[0]["spike_" + str(index)] = float(tc)
         instance_obj.efel = None
         instance_obj.efel = results[0]
-        #print(instance_obj.efel.keys())
-        '''
+        # print(instance_obj.efel.keys())
+        """
         if isinstance(efel_filter_iterable,type(dict())):
             for k,v in instance_obj.efel.items():
                 units = efel_filter_iterable[k]
                 if units is not None and v is not None:
                     instance_obj.efel[k] = v*units
-        '''
+        """
         efel.reset()
-        assert hasattr(instance_obj,'efel')
+        assert hasattr(instance_obj, "efel")
     return instance_obj
 
 
@@ -775,7 +803,7 @@ def inject_and_plot_model(
     return [vm, plt, dtc]
 
 
-def switch_logic(xtests:Any=None)->List:
+def switch_logic(xtests: Any = None) -> List:
     try:
         atsd = TSD()
     except:
@@ -818,7 +846,7 @@ def switch_logic(xtests:Any=None)->List:
     return xtests
 
 
-def active_values(keyed:dict, rheobase, square:dict=None)->dict:
+def active_values(keyed: dict, rheobase, square: dict = None) -> dict:
     keyed["injected_square_current"] = {}
     if square is None:
         if isinstance(rheobase, type(dict())):
@@ -850,7 +878,7 @@ def neutral_values(keyed: dict = {}) -> dict:
     return keyed
 
 
-def initialise_test(v:Any, rheobase:Any=None)->dict:
+def initialise_test(v: Any, rheobase: Any = None) -> dict:
     if not isinstance(v, Iterable):
         v = [v]
     v = switch_logic(v)
