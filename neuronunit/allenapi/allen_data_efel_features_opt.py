@@ -268,7 +268,10 @@ def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
 def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count):
     best_ind = hall_of_fame[0]
     model = cell_evaluator.cell_model
-    tests = cell_evaluator.suite.tests
+    try:
+        tests = cell_evaluator.suite.tests
+    except:
+        tests = suite.tests
     scores = []
     obs_preds = []
 
