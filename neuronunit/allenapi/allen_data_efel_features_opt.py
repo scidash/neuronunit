@@ -20,7 +20,6 @@ from sciunit import TestSuite
 from sciunit.scores import ZScore
 from sciunit.scores.collections import ScoreArray
 
-from neuronunit.tests import SpikeCountSearch
 from neuronunit.allenapi import make_allen_tests_from_id
 from neuronunit.allenapi.make_allen_tests_from_id import *
 from neuronunit.allenapi.make_allen_tests import AllenTest
