@@ -172,7 +172,7 @@ def get_model_parts(data_set, sweep_numbers, specimen_id):
 
 
 def get_model_parts_sweep_from_spk_cnt(
-    int: spk_cnt, data_set, sweep_numbers, int: specimen_id
+    spk_cnt, data_set, sweep_numbers, specimen_id
 ):
     sweep_numbers = sweep_numbers["Square - 2s Suprathreshold"]
     rheobase = -1
