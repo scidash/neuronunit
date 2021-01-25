@@ -27,6 +27,23 @@ from neuronunit.allenapi.make_allen_tests import AllenTest
 from neuronunit.optimization.optimization_management import inject_model_soma
 from neuronunit.optimization.model_parameters import BPO_PARAMS
 
+def match_current_amp_to_model_param(spk_count,model_type,template_model):
+    observation_range = {}
+    observation_range["value"] = spk_count
+    template_model.backend = model_type
+    template_model.allen = True
+    template_model.NU = True
+    if fixed_current:
+        uc = {
+            "amplitude": fixed_current,
+            "duration": ALLEN_DURATION,
+            "delay": ALLEN_DELAY,
+        }
+        target_current = None
+    else:
+        scs = SpikeCountSearch(observation_range)
+        target_current = scs.generate_prediction(template_model)
+    return target_current
 
 def opt_setup(
     specimen_id,
@@ -78,21 +95,8 @@ def opt_setup(
         if t.name == "Spikecount":
             spk_count = float(t.observation["mean"])
             break
-    observation_range = {}
-    observation_range["value"] = spk_count
-    template_model.backend = model_type
-    template_model.allen = True
-    template_model.NU = True
-    if fixed_current:
-        uc = {
-            "amplitude": fixed_current,
-            "duration": ALLEN_DURATION,
-            "delay": ALLEN_DELAY,
-        }
-        target_current = None
-    else:
-        scs = SpikeCountSearch(observation_range)
-        target_current = scs.generate_prediction(template_model)
+
+    target_current = match_current_amp_to_model_param(spk_count,model_type,template_model)
     template_model.seeded_current = target_current["value"]
 
     cell_evaluator, template_model = opt_setup_two(
@@ -103,6 +107,7 @@ def opt_setup(
         spk_count,
         template_model=template_model,
         score_type=score_type,
+        efel_filter_iterable=efel_filter_iterable
     )
     return suite, target_current, spk_count, cell_evaluator, template_model
 
@@ -180,6 +185,7 @@ def opt_setup_two(
     spk_count,
     template_model=None,
     score_type=ZScore,
+    efel_filter_iterable=None
 ):
     assert template_model.backend == model_type
     template_model.params = BPO_PARAMS[model_type]
