@@ -32,9 +32,6 @@ def match_current_amp_to_model_param(spk_count,
                                     fixed_current):
     observation_range = {}
     observation_range["value"] = spk_count
-    template_model.backend = model_type
-    template_model.allen = True
-    template_model.NU = True
     if fixed_current:
         uc = {
             "amplitude": fixed_current,
@@ -98,6 +95,9 @@ def opt_setup(
             spk_count = float(t.observation["mean"])
             break
 
+    template_model.backend = model_type
+    template_model.allen = True
+    template_model.NU = True
     target_current = match_current_amp_to_model_param(spk_count,
                             model_type,
                             template_model,
