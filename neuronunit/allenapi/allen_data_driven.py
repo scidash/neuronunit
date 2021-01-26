@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
 import pickle
 import seaborn as sns
 import os
-#import matplotlib.pyplot as plt
 import copy
 import numpy as np
 from collections.abc import Iterable
@@ -296,8 +295,7 @@ def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
         selector_name="IBEA",
         mutpb=mutpb,
         cxpb=cxpb,
-        ELITISM=True,
-        NEURONUNIT=True,
+        neuronunit=True,
     )
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
     return final_pop, hall_of_fame, logs, hist

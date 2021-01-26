@@ -550,8 +550,7 @@ def _opt_(
         selector_name=diversity,
         mutpb=mut,
         cxpb=cxp,
-        NEURONUNIT=True,
-        ELITISM=True,
+        neuronunit=True,
     )
 
     final_pop, hall_of_fame, logs, hist = optimization.run(max_ngen=NGEN)

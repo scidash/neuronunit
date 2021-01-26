@@ -31,7 +31,7 @@ import deap.algorithms
 import deap.tools
 import pickle
 from tqdm.auto import tqdm
-from .stoppingCriteria import MaxNGen
+from bluepyopt.deapext.stoppingCriteria import MaxNGen
 import streamlit as st
 logger = logging.getLogger('__main__')
 import numpy as np
@@ -86,12 +86,11 @@ def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb,gen):
 	BOUND_UP = []
 	NDIM = len(parents[0])
 	fit_dim = len(parents[0].fitness.values)
-	for x in range(0,len(parents[0])):
+	for x in range(0,NDIM):
 		BOUND_LOW.append(toolbox.uniformparams.args[0][x])
 		BOUND_UP.append(toolbox.uniformparams.args[1][x])
-	ETA = int(25.0*(5/gen))
+	ETA = int(22.50*1.0/np.log(gen))
 	toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=ETA)
-	#toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=ETA, indpb=1.0/NDIM)
 	if hasattr(toolbox, 'variate'):
 		return toolbox.variate(parents, toolbox, cxpb, mutpb)
 	return deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
@@ -127,8 +126,8 @@ def eaAlphaMuPlusLambdaCheckpoint(
 		cp_frequency=1,
 		cp_filename=None,
 		continue_cp=False,
-		ELITISM=False,
-	NEURONUNIT=False):
+		ELITISM=True,
+		DIM_ETA=False):
 	r"""This is the :math:`(~\alpha,\mu~,~\lambda)` evolutionary algorithm
 
 	Args:
@@ -178,7 +177,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
 		invalid_count = _evaluate_invalid_fitness(toolbox, population)
 		_update_history_and_hof(halloffame, history, population)
 		_record_stats(stats, logbook, start_gen, population, invalid_count)
-		logger.info(logbook.stream)
+		#logger.info(logbook.stream)
 	stopping_criteria = [MaxNGen(ngen)]
 
 	# Begin the generational process
@@ -186,10 +185,10 @@ def eaAlphaMuPlusLambdaCheckpoint(
 	stopping_params = {"gen": gen}
 	pbar = tqdm(total=ngen)
 	while not(_check_stopping_criteria(stopping_criteria, stopping_params)):
-		#if NEURONUNIT:
-		#	offspring = _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb, gen)
-		#else:
-		offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
+		if DIM_ETA:
+			offspring = _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb, gen)
+		else:
+			offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
 
 		population = parents + offspring
 
@@ -204,15 +203,14 @@ def eaAlphaMuPlusLambdaCheckpoint(
 		_record_stats(stats, logbook, gen, population, invalid_count)
 
 		# Select the next generation parents
-		if NEURONUNIT:
-			if mu>=90:
-				parents = toolbox.select(population, int(mu/5))
-			else:
-				parents = toolbox.select(population, int(mu/3))
+		if mu>=90:
+			parents = toolbox.select(population, int(mu/5))
+		else:
+			parents = toolbox.select(population, int(mu/3))
 
 		else:
 			parents = toolbox.select(population, mu)
-		logger.info(logbook.stream)
+		#logger.info(logbook.stream)
 
 		if(cp_filename and cp_frequency and
 		   gen % cp_frequency == 0):
