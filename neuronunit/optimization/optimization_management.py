@@ -416,8 +416,8 @@ class NUFeature_standard_suite(object):
         dtc = responses["dtc"]
         model = dtc.dtc_to_model()
         model.attrs = responses["params"]
-        print(self.test.params.keys())
-        print(self.test.params["padding"])
+        #print(self.test.params.keys())
+        self.test.params["padding"]=self.test.params["tmax"]
         self.test = initialise_test(self.test)
         if self.test.active and responses["dtc"].rheobase is not None:
             result = exclude_non_viable_deflections(responses)
@@ -577,7 +577,6 @@ def _opt_(
         else:
             obs_preds.append((t.name, t.observation, t.prediction, scores[-1]))
 
-    df = pd.DataFrame(obs_preds)
 
     model.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
@@ -586,7 +585,11 @@ def _opt_(
     opt.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
-    #df = opt.make_pretty(tests=tests)
+    try:
+        df = opt.make_pretty(tests=tests)
+    except:
+        df = pd.DataFrame(obs_preds)
+
     best_fit_val = best_ind.fitness.values
     return (
         final_pop,
@@ -625,7 +628,11 @@ def public_opt(
 
 
 def inject_model_soma(
-    dtc: DataTC, figname=None, solve_for_current=None, fixed: bool = False
+    dtc: DataTC,
+    figname=None,
+    solve_for_current=None,
+    fixed: bool = False,
+    final_run = False,
 ) -> Union[AnalogSignal, AnalogSignal, dict, Any, DataTC]:
     from neuronunit.tests.target_spike_current import SpikeCountSearch
 
@@ -654,11 +661,16 @@ def inject_model_soma(
             dtc.solve_for_current = solve_for_current
             ALLEN_DELAY = 1000.0 * pq.ms
             ALLEN_DURATION = 2000.0 * pq.ms
+            if final_run:
+                padding = 342.85* pq.ms
+            else:
+                padding = 0.0* pq.ms
+
         uc = {
             "amplitude": solve_for_current,
             "duration": ALLEN_DURATION,
             "delay": ALLEN_DELAY,
-            "padding":342.85* pq.ms
+            "padding":padding
         }
         model = dtc.dtc_to_model()
         model._backend.attrs = temp

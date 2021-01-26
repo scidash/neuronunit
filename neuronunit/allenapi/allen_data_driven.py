@@ -216,8 +216,6 @@ class NUFeatureAllenMultiSpike(object):
                 delta = np.abs(float(score_gene.raw))
             if np.nan == delta or delta == np.inf:
                 delta = 1000.0
-            # if delta == 1000.0:
-            #    print(self.test.name)
 
             return delta
 

@@ -18,31 +18,23 @@ import dask.bag as db
 import quantities as pq
 import numpy as np
 import copy
-#from numba import jit
 import time
-#import numba
 import copy
 import dask
-#import matplotlib as mpl
-#try:
-#    mpl.use('Agg')
-#except:
-#    pass
-import matplotlib.pyplot as plt
 from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2amplitudes, threshold_detection
 
 tolerance = 0.0
 
 class RheobaseTest(VmTest):
-    """Serial implementation of a binary search to test the rheobase.
+    """
+    --Synopsis:
+        Serial implementation of a binary search to test the rheobase.
 
-    Strengths: this algorithm is faster than the parallel class, present in
-    this file under important and limited circumstances: this serial algorithm
-    is faster than parallel for model backends that are able to implement
-    numba jit optimization.
+        Strengths: this algorithm is faster than the parallel class, present in
+        this file under important and limited circumstances: this serial algorithm
+        is faster than parallel for model backends that are able to implement
+        numba jit optimization.
 
-    Weaknesses this serial class is significantly slower, for many backend
-    implementations including raw NEURON, NEURON via PyNN, and possibly GLIF.
 
     """
 
@@ -52,6 +44,12 @@ class RheobaseTest(VmTest):
         self.small = 0*pq.pA
         self.rheobase_vm = None
         self.verbose = False
+    def __init__(self,observation=None,prediction=None,target_number_spikes=1,name="RheobaseTest"):
+        self._extra()
+        super(RheobaseTest,self).__init__(observation=observation,name=name)
+        self.prediction = prediction
+        self.target_number_spikes = target_number_spikes
+
     required_capabilities = (ncap.ReceivesSquareCurrent,
                              ncap.ProducesSpikes)
 
@@ -79,27 +77,39 @@ class RheobaseTest(VmTest):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
+
+        ##
+        # Handle case that the
+        # Test constructor __init__ originated from
+        # a file that is older than this source code
+        # because it was recovered from pickle.
+        ##
+        if not hasattr(self,'target_number_spikes'):
+            self.target_number_spikes=1
+
+
         self.condition_model(model)
         prediction = {'value': None}
         model.rerun = True
 
-        try:
-            units = self.observation['value'].units
-        except KeyError:
-            units = self.observation['mean'].units
-
+        if self.observation is not None:
+            try:
+                units = self.observation['value'].units
+            except KeyError:
+                units = self.observation['mean'].units
+        else:
+            units = pq.pA
         lookup = self.threshold_FI(model, units)
         ##
         # New code
         ##
-        temp = [ v for v in lookup.values() if v>1 ]
+        temp = [ v for v in lookup.values() if v>self.target_number_spikes ]
         if len(temp):
             too_many_spikes = np.min(temp)
         else:
             too_many_spikes = 0
 
-        spikes_one = sorted([ (k,v) for k,v in lookup.items() if v==1 ])
-        #lookup2 = {k:v for k,v in lookup.items() if float(v)==1.0 }
+        spikes_one = sorted([ (k,v) for k,v in lookup.items() if v==self.target_number_spikes ])
 
         if len(spikes_one)>=3:
             prediction['value'] = np.abs(spikes_one[0][0]*units)
@@ -197,12 +207,11 @@ class RheobaseTest(VmTest):
             supra = np.array([x for x in lookup if lookup[x] > 0])*units
             # The actual part of the Rheobase test that is
             # computation intensive and therefore
-            # a target for parellelization.
-            temp_ = [ v for v in lookup.values() if v==1 ]
+            temp_ = [ v for v in lookup.values() if v==self.target_number_spikes ]
 
             if len(supra) and len(sub):
                 delta = float(supra.min()) - float(sub.max())
-                temp = [ v for v in lookup.values() if v>1 ]
+                temp = [ v for v in lookup.values() if v>self.target_number_spikes ]
                 if len(temp):
                     too_many_spikes = np.min(temp)
                 else:
@@ -264,6 +273,21 @@ class RheobaseTestP(RheobaseTest):
     of backends.
     """
 
+
+    def _extra(self,target_number_spikes=1):
+        self.verbose = False
+        self.target_number_spikes = 1
+
+    def __init__(self,observation=None,prediction=None,target_number_spikes=1,name=""):
+        self._extra()
+        super(RheobaseTest,self).__init__(observation=observation,name=name)
+        self.prediction = prediction
+        self.target_number_spikes = target_number_spikes
+
+
+    required_capabilities = (ncap.ReceivesSquareCurrent,
+                             ncap.ProducesSpikes)
+
     name = "Rheobase test"
     description = ("A test of the rheobase, i.e. the minimum injected current "
                    "needed to evoke at least one spike.")
@@ -291,12 +315,10 @@ class RheobaseTestP(RheobaseTest):
                            'duration': DURATION,
                            'duration': DELAY,
                            'tolerance': 1.0*pq.pA})
-    #self.default_params = default_params
     params_schema = dict(VmTest.params_schema)
     params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
     units = pq.pA
 
-    #@timer
     def generate_prediction(self, model):
         def check_fix_range(dtc):
             '''
@@ -325,15 +347,14 @@ class RheobaseTestP(RheobaseTest):
                 # Termination criterion
 
                 steps = np.linspace(sub.max(),supra.min(),cpucount)*pq.pA
-                steps = steps[1:-1]#*pq.pA
+                steps = steps[1:-1]
             elif len(sub):
-                #steps = np.linspace(sub.max(),0.5*sub.max(),cpucount+1)*pq.pA
 
                 steps = np.linspace(sub.max(),10*sub.max(),cpucount)*pq.pA
-                steps = steps[1:-1]#*pq.pA
+                steps = steps[1:-1]
             elif len(supra):
                 steps = np.linspace(supra.min()-100,supra.min(),cpucount)*pq.pA
-                steps = steps[1:-1]#*pq.pA
+                steps = steps[1:-1]
 
             dtc.current_steps = steps
             return dtc
@@ -372,8 +393,8 @@ class RheobaseTestP(RheobaseTest):
 
                 dtc.previous = ampl
                 dtc.rheobase = {}
-                if n_spikes == 1:
-                    dtc.lookup[float(ampl)] = 1
+                if n_spikes == self.target_number_spikes:
+                    dtc.lookup[float(ampl)] = self.target_number_spikes
                     dtc.rheobase['value'] = ampl
                     dtc.boolean = True
 
@@ -403,13 +424,9 @@ class RheobaseTestP(RheobaseTest):
                 dtc = check_current(dtc)
                 if dtc.boolean:
                     return dtc
-                #else:
             if dtc.initiated == False:
                 dtc.boolean = False
-                if str('PYNN') in dtc.backend:
-                    steps = np.linspace(100.0,1000.0,7.0)
-                else:
-                    steps = np.linspace(0.0,550.0,cpucount)
+                steps = np.linspace(0.0,550.0,cpucount)
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
                 dtc.initiated = True
@@ -467,10 +484,9 @@ class RheobaseTestP(RheobaseTest):
                     if delta < tolerance or (str(supra.min()) == str(sub.max())):
                         if self.verbose >= 2:
                             print(delta, 'a neuron, close to the edge! Multi spiking rheobase. # spikes: ',len(supra))
-                        too_many_spikes = np.min([ v for v in dtc.lookup.values() if v>1 ])
+                        too_many_spikes = np.min([ v for v in dtc.lookup.values() if v>self.target_number_spikes ])
                         if too_many_spikes>10:
 
-                            print(delta, 'elephant tests dont work well on high frequency spikes, therefore, this trace excluded. # spikes: ',len(supra))
                             dtc.rheobase = {}
                             dtc.rheobase['value'] = None
                             dtc.boolean = True

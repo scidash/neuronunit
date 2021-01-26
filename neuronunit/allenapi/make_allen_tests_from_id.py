@@ -195,11 +195,12 @@ def get_model_parts_sweep_from_spk_cnt(
                 sampling_rate=sampling_rate * qt.Hz,
                 units=qt.mV,
             )
+            # Reduce the recording to a smaller time window when interesting things
+            # happen
             vmm = vmm[0 : int(len(vmm) / 2.1)]
+            # store the sweep number in the neo AnalogSignal trace object.
             vmm.sn = None
             vmm.sn = sn
-            print(vmm.sn,'sweep number')
-            print(vmm.times[-1],'len recording')
             return vmm, stimulus, sn, spike_times
     return None, None, None, None
 
