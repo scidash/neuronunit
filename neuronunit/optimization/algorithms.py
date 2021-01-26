@@ -208,8 +208,6 @@ def eaAlphaMuPlusLambdaCheckpoint(
 		else:
 			parents = toolbox.select(population, int(mu/3))
 
-		else:
-			parents = toolbox.select(population, mu)
 		#logger.info(logbook.stream)
 
 		if(cp_filename and cp_frequency and
