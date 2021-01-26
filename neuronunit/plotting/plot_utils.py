@@ -157,10 +157,8 @@ except:
 def check_bin_vm_soma(target,opt):
     import matplotlib
     import matplotlib.pyplot as plt
-    import seaborn as sns
     import plotly.graph_objects as go
     import quantities as qt
-    sns.set(context="paper", font="monospace")
 
     plt.plot(target.vm_soma.times,target.vm_soma.magnitude,label='Allen Experiment')
     plt.plot(opt.vm_soma.times,opt.vm_soma.magnitude,label='Optimized Model')

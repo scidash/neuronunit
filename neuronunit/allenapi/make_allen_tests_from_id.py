@@ -198,6 +198,8 @@ def get_model_parts_sweep_from_spk_cnt(
             vmm = vmm[0 : int(len(vmm) / 2.1)]
             vmm.sn = None
             vmm.sn = sn
+            print(vmm.sn,'sweep number')
+            print(vmm.times[-1],'len recording')
             return vmm, stimulus, sn, spike_times
     return None, None, None, None
 

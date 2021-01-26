@@ -3,16 +3,16 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
 import pickle
 import seaborn as sns
 import os
-
-import bluepyopt as bpop
-import bluepyopt.ephys as ephys
-from bluepyopt.parameters import Parameter
-
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import copy
 import numpy as np
 from collections.abc import Iterable
 import pandas as pd
+import quantities as pq
+
+import bluepyopt as bpop
+import bluepyopt.ephys as ephys
+from bluepyopt.parameters import Parameter
 
 from sciunit.scores import RelativeDifferenceScore
 from sciunit import TestSuite
@@ -27,6 +27,7 @@ from neuronunit.optimization.optimization_management import inject_model_soma
 from neuronunit.optimization.model_parameters import BPO_PARAMS
 from neuronunit.tests import (
     RheobaseTest,
+    CapacitanceTest,
     RestingPotentialTest,
     InputResistanceTest,
     TimeConstantTest,

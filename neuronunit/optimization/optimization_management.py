@@ -1,28 +1,24 @@
 # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
-from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
-from sciunit.utils import config_set
-
-config_set("PREVALIDATE", False)
-
-import dask
-from tqdm import tqdm
 import warnings
-
-from neo import AnalogSignal
-
 SILENT = True
 if SILENT:
+    warnings.filterwarnings('ignore', message='H5pyDeprecationWarning')
     warnings.filterwarnings("ignore")
 
-import numpy, time
 
 try:
     import efel
 except:
     warnings.warn("Blue brain feature extraction not available, consider installing")
 
-
+#import time
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
+import dask
+from tqdm import tqdm
+import warnings
+from neo import AnalogSignal
+from elephant.spike_train_generation import threshold_detection
 import numpy as np
 import cython
 import pandas as pd
@@ -38,19 +34,18 @@ import copy
 from frozendict import frozendict
 from itertools import repeat
 import random
+import quantities as pq
+
 import bluepyopt as bpop
 import bluepyopt.ephys as ephys
 from bluepyopt.parameters import Parameter
-import quantities as pq
-
-PASSIVE_DURATION = 500.0 * pq.ms
-PASSIVE_DELAY = 200.0 * pq.ms
-from elephant.spike_train_generation import threshold_detection
 
 import sciunit
 from sciunit import TestSuite
 from sciunit import scores
 from sciunit.scores import RelativeDifferenceScore
+from sciunit.utils import config_set
+config_set("PREVALIDATE", False)
 
 from jithub.models import model_classes
 
@@ -65,6 +60,9 @@ from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
 from neuronunit.tests.fi import RheobaseTest
 from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2widths
 from neuronunit.tests import VmTest
+
+PASSIVE_DURATION = 500.0 * pq.ms
+PASSIVE_DELAY = 200.0 * pq.ms
 
 
 class TSD(dict):
@@ -418,11 +416,17 @@ class NUFeature_standard_suite(object):
         dtc = responses["dtc"]
         model = dtc.dtc_to_model()
         model.attrs = responses["params"]
+        print(self.test.params.keys())
+        print(self.test.params["padding"])
         self.test = initialise_test(self.test)
         if self.test.active and responses["dtc"].rheobase is not None:
             result = exclude_non_viable_deflections(responses)
             if result != 0:
                 return result
+        #if self.test.name == "RheobaseTest":
+        #    if not hasattr(self.test,'target_number_spikes'):
+        #        self.test.target_number_spikes=1
+
         self.test.prediction = self.test.generate_prediction(model)
         if responses["rheobase"] is not None:
             if self.test.prediction is not None:
@@ -654,6 +658,7 @@ def inject_model_soma(
             "amplitude": solve_for_current,
             "duration": ALLEN_DURATION,
             "delay": ALLEN_DELAY,
+            "padding":342.85* pq.ms
         }
         model = dtc.dtc_to_model()
         model._backend.attrs = temp
