@@ -314,7 +314,8 @@ def multi_spiking_feature_extraction(
         dtc = efel_evaluation(dtc, efel_filter_iterable)
         dtc.vm_soma = None
     else:
-        _, _, _, _, dtc = inject_model_soma(dtc, solve_for_current=solve_for_current)
+        _, _, _, _, dtc = inject_model_soma(dtc,
+                            solve_for_current=solve_for_current)
         if dtc.vm_soma is None:
             return dtc
         dtc = efel_evaluation(dtc, efel_filter_iterable)
@@ -419,7 +420,8 @@ class NUFeature_standard_suite(object):
         model = dtc.dtc_to_model()
         model.attrs = responses["params"]
         # print(self.test.params.keys())
-        self.test.params["padding"] = self.test.params["tmax"]
+        #self.test.params["padding"] = self.test.params["tmax"]
+
         self.test = initialise_test(self.test)
         if self.test.active and responses["dtc"].rheobase is not None:
             result = exclude_non_viable_deflections(responses)
@@ -663,15 +665,19 @@ def inject_model_soma(
             ALLEN_DURATION = 2000.0 * pq.ms
             if final_run:
                 padding = 342.85 * pq.ms
+                uc = {
+                    "amplitude": solve_for_current,
+                    "duration": ALLEN_DURATION,
+                    "delay": ALLEN_DELAY,
+                    "padding": padding,
+                }
             else:
-                padding = 0.0 * pq.ms
+                uc = {
+                    "amplitude": solve_for_current,
+                    "duration": ALLEN_DURATION,
+                    "delay": ALLEN_DELAY,
+                    }
 
-        uc = {
-            "amplitude": solve_for_current,
-            "duration": ALLEN_DURATION,
-            "delay": ALLEN_DELAY,
-            "padding": padding,
-        }
         model = dtc.dtc_to_model()
         model._backend.attrs = temp
         model.inject_square_current(**uc)
@@ -903,6 +909,16 @@ def neutral_values(keyed: dict = {}) -> dict:
 
 
 def initialise_test(v: Any, rheobase: Any = None) -> dict:
+    '''
+    -- Synpopsis:
+    Create appropriate square wave stimulus for various
+    Different square pulse current injection protocols.
+    ###
+    # TODO move this to BPO/ephys/protocols.py
+    # unify it with BPO protocol code.
+    # It is already a bit similar.
+    ###
+    '''
     if not isinstance(v, Iterable):
         v = [v]
     v = switch_logic(v)

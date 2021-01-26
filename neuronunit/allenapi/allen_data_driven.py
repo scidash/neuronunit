@@ -332,10 +332,10 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
     target.seeded_current = target_current["value"]
     target.spk_count = spk_count
     _, _, _, _, target = inject_model_soma(
-        target, solve_for_current=target_current["value"], final_run=True
+        target, solve_for_current=target_current["value"], final_run=False
     )
     _, _, _, _, opt = inject_model_soma(
-        opt, solve_for_current=target_current["value"], final_run=True
+        opt, solve_for_current=target_current["value"], final_run=False
     )
 
     return opt, target, scores, obs_preds, df

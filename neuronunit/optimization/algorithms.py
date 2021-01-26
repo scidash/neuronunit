@@ -118,6 +118,21 @@ def _check_stopping_criteria(criteria, params):
             return True
     else:
         return False
+def filter_parents(parents):
+    cntr=0
+    for p in parents:
+        for fv in p.fitness.values:
+            if fv==1000.0:
+                cntr+=1
+                break
+    while cntr>0:
+        for i,p in enumerate(parents):
+            for fv in p.fitness.values:
+                if fv==1000.0:
+                    del parents[i]
+                    cntr-=1
+                    break
+    return parents
 
 
 def eaAlphaMuPlusLambdaCheckpoint(
@@ -212,12 +227,16 @@ def eaAlphaMuPlusLambdaCheckpoint(
         _record_stats(stats, logbook, gen, population, invalid_count)
 
         # Select the next generation parents
-        if mu >= 90:
-            parents = toolbox.select(population, int(mu / 5))
-        else:
-            parents = toolbox.select(population, int(mu / 3))
+        if mu >= 90 < 100:
+            parents = toolbox.select(population, int(mu / 4))
+        elif mu >= 100:
+            parents = toolbox.select(population, int(mu / 4))
 
-        # logger.info(logbook.stream)
+        else:
+            parents = toolbox.select(population, int(mu / 2))
+
+        #parents = filter_parents(parents)
+        logger.info(logbook.stream)
 
         if cp_filename and cp_frequency and gen % cp_frequency == 0:
             cp = dict(

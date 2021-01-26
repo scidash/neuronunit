@@ -385,7 +385,6 @@ def process_all_cells():
     --Synopsis: download some NeuroElectroSummary
     observations and use values to construct appropriate
     NeuronUnit tests, then pickle them.
-    
     TODO rename pull all cells
     see alias below.
 
