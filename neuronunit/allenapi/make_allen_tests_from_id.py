@@ -171,9 +171,7 @@ def get_model_parts(data_set, sweep_numbers, specimen_id):
     return vm15, vm30, rheobase, currents, vmrh
 
 
-def get_model_parts_sweep_from_spk_cnt(
-    spk_cnt, data_set, sweep_numbers, specimen_id
-):
+def get_model_parts_sweep_from_spk_cnt(spk_cnt, data_set, sweep_numbers, specimen_id):
     sweep_numbers = sweep_numbers["Square - 2s Suprathreshold"]
     rheobase = -1
     above_threshold_sn = []

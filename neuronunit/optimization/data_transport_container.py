@@ -71,6 +71,7 @@ class DataTC(object):
 
     def to_bpo_param(self, attrs: dict = {}) -> dict:
         from bluepyopt.parameters import Parameter
+
         lop = {}
         for k, v in attrs.items():
             p = Parameter(name=k, bounds=v, frozen=False)
@@ -83,7 +84,7 @@ class DataTC(object):
         for k, v in self.params.items():
             if np.round(v, 2) != 0:
                 self.params[k] = np.round(v, 2)
-            if k=='celltype':
+            if k == "celltype":
                 self.params[k] = int(np.round(v, 0))
 
         return self
@@ -127,7 +128,7 @@ class DataTC(object):
 
         for k, v in holding_preds.items():
             if k in holding_obs.keys() and k in holding_preds:
-                #units1 = holding_preds[k].units  # v.units)
+                # units1 = holding_preds[k].units  # v.units)
 
                 units1 = holding_preds[k].rescale_preferred().units  # v.units)
 

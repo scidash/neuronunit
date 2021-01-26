@@ -30,8 +30,9 @@ from neuronunit.tests import (
     RestingPotentialTest,
     InputResistanceTest,
     TimeConstantTest,
-    FITest
+    FITest,
 )
+
 
 def opt_setup(
     specimen_id,
@@ -322,8 +323,8 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
     target = copy.copy(opt)
     if "vm_soma" in suite.traces.keys():
         target.vm_soma = suite.traces["vm_soma"]
-    else:  # backwards compatibility
-        target.vm_soma = suite.traces["vm15"]
+    # else:  # backwards compatibility
+    #    target.vm_soma = suite.traces["vm15"]
     opt.seeded_current = target_current["value"]
     opt.spk_count = spk_count
     opt = opt.attrs_to_params()
@@ -331,9 +332,11 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
     target.seeded_current = target_current["value"]
     target.spk_count = spk_count
     _, _, _, _, target = inject_model_soma(
-        target, solve_for_current=target_current["value"]
+        target, solve_for_current=target_current["value"], final_run=True
     )
-    _, _, _, _, opt = inject_model_soma(opt, solve_for_current=target_current["value"])
+    _, _, _, _, opt = inject_model_soma(
+        opt, solve_for_current=target_current["value"], final_run=True
+    )
 
     return opt, target, scores, obs_preds, df
 

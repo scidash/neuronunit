@@ -1,9 +1,10 @@
 # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
 import warnings
+
 SILENT = True
 if SILENT:
-    warnings.filterwarnings('ignore', message='H5pyDeprecationWarning')
+    warnings.filterwarnings("ignore", message="H5pyDeprecationWarning")
     warnings.filterwarnings("ignore")
 
 
@@ -12,7 +13,7 @@ try:
 except:
     warnings.warn("Blue brain feature extraction not available, consider installing")
 
-#import time
+# import time
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
 import dask
 from tqdm import tqdm
@@ -45,6 +46,7 @@ from sciunit import TestSuite
 from sciunit import scores
 from sciunit.scores import RelativeDifferenceScore
 from sciunit.utils import config_set
+
 config_set("PREVALIDATE", False)
 
 from jithub.models import model_classes
@@ -416,14 +418,14 @@ class NUFeature_standard_suite(object):
         dtc = responses["dtc"]
         model = dtc.dtc_to_model()
         model.attrs = responses["params"]
-        #print(self.test.params.keys())
-        self.test.params["padding"]=self.test.params["tmax"]
+        # print(self.test.params.keys())
+        self.test.params["padding"] = self.test.params["tmax"]
         self.test = initialise_test(self.test)
         if self.test.active and responses["dtc"].rheobase is not None:
             result = exclude_non_viable_deflections(responses)
             if result != 0:
                 return result
-        #if self.test.name == "RheobaseTest":
+        # if self.test.name == "RheobaseTest":
         #    if not hasattr(self.test,'target_number_spikes'):
         #        self.test.target_number_spikes=1
 
@@ -576,7 +578,6 @@ def _opt_(
         else:
             obs_preds.append((t.name, t.observation, t.prediction, scores[-1]))
 
-
     model.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
@@ -631,7 +632,7 @@ def inject_model_soma(
     figname=None,
     solve_for_current=None,
     fixed: bool = False,
-    final_run = False,
+    final_run=False,
 ) -> Union[AnalogSignal, AnalogSignal, dict, Any, DataTC]:
     from neuronunit.tests.target_spike_current import SpikeCountSearch
 
@@ -661,15 +662,15 @@ def inject_model_soma(
             ALLEN_DELAY = 1000.0 * pq.ms
             ALLEN_DURATION = 2000.0 * pq.ms
             if final_run:
-                padding = 342.85* pq.ms
+                padding = 342.85 * pq.ms
             else:
-                padding = 0.0* pq.ms
+                padding = 0.0 * pq.ms
 
         uc = {
             "amplitude": solve_for_current,
             "duration": ALLEN_DURATION,
             "delay": ALLEN_DELAY,
-            "padding":padding
+            "padding": padding,
         }
         model = dtc.dtc_to_model()
         model._backend.attrs = temp
@@ -759,22 +760,24 @@ def efel_evaluation(
         instance_obj.efel = None
         instance_obj.efel = results[0]
         efel.reset()
-        #instance_obj = apply_units_to_efel(instance_obj,
+        # instance_obj = apply_units_to_efel(instance_obj,
         #                                    efel_filter_iterable)
         assert hasattr(instance_obj, "efel")
     return instance_obj
+
 
 def generic_nu_tests_to_bpo_protocols(multi_spiking=None):
     pass
 
 
-def apply_units_to_efel(instance_obj,efel_filter_iterable):
-    if isinstance(efel_filter_iterable,type(dict())):
-        for k,v in instance_obj.efel.items():
+def apply_units_to_efel(instance_obj, efel_filter_iterable):
+    if isinstance(efel_filter_iterable, type(dict())):
+        for k, v in instance_obj.efel.items():
             units = efel_filter_iterable[k]
             if units is not None and v is not None:
-                instance_obj.efel[k] = v*units
+                instance_obj.efel[k] = v * units
     return instance_obj
+
 
 def inject_and_plot_model(
     dtc: DataTC, figname=None, plotly=True, verbose=False
@@ -800,6 +803,7 @@ def inject_and_plot_model(
         return [None, None, None]
     if not plotly:
         import matplotlib.pyplot as plt
+
         plt.clf()
         plt.figure()
         if dtc.backend in str("HH"):

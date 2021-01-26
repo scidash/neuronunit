@@ -381,6 +381,15 @@ def switch_logic(xtests):
 
 
 def process_all_cells():
+    '''
+    --Synopsis: download some NeuroElectroSummary
+    observations and use values to construct appropriate
+    NeuronUnit tests, then pickle them.
+    
+    TODO rename pull all cells
+    see alias below.
+
+    '''
     try:
         with open("processed_multicellular_constraints.p", "rb") as f:
             filtered_cells = pickle.load(f)
@@ -425,6 +434,10 @@ def process_all_cells():
         with open("processed_multicellular_constraints.p", "wb") as f:
             pickle.dump(filtered_cells, f)
     return filtered_cells
+
+def pull_all_cells():
+    filtered_cells = process_all_cells()
+
 
 
 def get_common_criteria():
