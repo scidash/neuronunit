@@ -93,7 +93,7 @@ def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb, gen):
     for x in range(0, NDIM):
         BOUND_LOW.append(toolbox.uniformparams.args[0][x])
         BOUND_UP.append(toolbox.uniformparams.args[1][x])
-    ETA = int(22.50 * 1.0 / np.log(gen))
+    ETA = NGEN-gen#int(22.50 * 1.0 / np.log(gen))
     toolbox.register(
         "mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=ETA
     )
@@ -229,7 +229,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
         parents = toolbox.select(population, int(mu / 4))
 
-       
+
         logger.info(logbook.stream)
 
         if cp_filename and cp_frequency and gen % cp_frequency == 0:
