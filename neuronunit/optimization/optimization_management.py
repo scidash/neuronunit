@@ -416,16 +416,11 @@ class NUFeature_standard_suite(object):
         dtc = responses["dtc"]
         model = dtc.dtc_to_model()
         model.attrs = responses["params"]
-        print(self.test.params.keys())
-        print(self.test.params["padding"])
         self.test = initialise_test(self.test)
         if self.test.active and responses["dtc"].rheobase is not None:
             result = exclude_non_viable_deflections(responses)
             if result != 0:
                 return result
-        #if self.test.name == "RheobaseTest":
-        #    if not hasattr(self.test,'target_number_spikes'):
-        #        self.test.target_number_spikes=1
 
         self.test.prediction = self.test.generate_prediction(model)
         if responses["rheobase"] is not None:
@@ -643,7 +638,7 @@ def inject_model_soma(
     if type(solve_for_current) is not type(None):
         observation_range = {}
         model = dtc.dtc_to_model()
-        temp = model.attrs
+        #temp = model.attrs
 
         if not fixed:
             observation_range["value"] = dtc.spk_count
@@ -660,16 +655,47 @@ def inject_model_soma(
             "delay": ALLEN_DELAY,
             "padding":342.85* pq.ms
         }
-        model = dtc.dtc_to_model()
-        model._backend.attrs = temp
+        #model = dtc.dtc_to_model()
+        #model._backend.attrs = temp
         model.inject_square_current(**uc)
-        if hasattr(dtc, "spikes"):
-            dtc.spikes = model._backend.spikes
-        vm15 = model.get_membrane_potential()
-        dtc.vm_soma = vm15
+        #if hasattr(dtc, "spikes"):
+        #    dtc.spikes = model._backend.spikes
+        vm_soma = model.get_membrane_potential()
+        dtc.vm_soma = vm_soma
         del model
-        return None, vm15, uc, None, dtc
+        return None, vm_soma, uc, None, dtc
 
+#from sciunit.models import RunnableModel
+ALLEN_DURATION = 2000 * pq.ms
+ALLEN_DELAY = 1000 * pq.ms
+
+def extra_features(instance_obj: Any,results:List,vm_used:AnalogSignal) -> Any:
+    ##
+    # Refactor somewhere else, this simulation takes time.
+    # the rmp calculation somewhere else.
+    ##
+    uc = {'amplitude':0*pq.pA,
+          'duration':ALLEN_DURATION,
+          'delay':ALLEN_DELAY,
+          'padding':342.85* pq.ms}
+    if isinstance(instance_obj,type(DataTC())):
+        model = instance_obj.dtc_to_model()
+        model.inject_square_current(**uc)
+
+    else:
+        model = instance_obj        
+        model._backend.inject_square_current(**uc)
+
+    vr = model.get_membrane_potential()
+    vmr = np.mean(vr)
+    results[0]["vr_"] = vmr
+    if hasattr(instance_obj, "spikes"):
+        spikes = instance_obj._backend.spikes
+    else:
+        spikes = threshold_detection(vm_used)
+    for index, tc in enumerate(spikes):
+        results[0]["spike_" + str(index)] = float(tc)
+    return instance_obj,results
 
 def efel_evaluation(
     instance_obj: Any, efel_filter_iterable: Iterable = None, current: float = None
@@ -677,6 +703,12 @@ def efel_evaluation(
     """
     -- Synopsis: evaluate efel feature extraction criteria against on
     reduced cell models and probably efel data.
+    -- Args: multiple dispatch:
+        This method works on both sciunit runnable models
+        and DataTC objects.
+        efel_filter_iterable: is the list of efel features to extract
+        it can be a list or a dictionary, if it is a list, the keys should be feature units
+        current is the value of current amplitude to evaluate the model features at.
     """
     if isinstance(efel_filter_iterable, type(dict())):
         efel_filter_list = list(efel_filter_iterable.keys())
@@ -696,8 +728,6 @@ def efel_evaluation(
         "V": [float(v) for v in vm_used.magnitude],
         "stimulus_current": [current],
     }
-    ALLEN_DURATION = 2000 * pq.ms
-    ALLEN_DELAY = 1000 * pq.ms
     trace3["stim_end"] = [float(ALLEN_DELAY) + float(ALLEN_DURATION)]
     trace3["stim_start"] = [float(ALLEN_DELAY)]
 
@@ -731,26 +761,22 @@ def efel_evaluation(
                 "peak_voltage": pq.mV,
                 "base_voltage": pq.mV,
                 "AHP_depth": pq.mV,
-                "AHP_depth_abs": pq.mV,
-                "base_voltage": pq.mV,
+                "AHP_depth_abs": pq.mV
             }
             efel_filter_list = list(default_efel_filter_iterable.keys())
         results = efel.getMeanFeatureValues(
             [trace3], efel_filter_list, raise_warnings=False
         )
 
-        if hasattr(instance_obj, "spikes"):
-            spikes = instance_obj._backend.spikes
-        else:
-            spikes = threshold_detection(vm_used)
-        for index, tc in enumerate(spikes):
-            results[0]["spike_" + str(index)] = float(tc)
-        instance_obj.efel = None
-        instance_obj.efel = results[0]
         efel.reset()
         #instance_obj = apply_units_to_efel(instance_obj,
         #                                    efel_filter_iterable)
+        instance_obj,results = extra_features(instance_obj,results,vm_used)
+
+        instance_obj.efel = None
+        instance_obj.efel = results[0]
         assert hasattr(instance_obj, "efel")
+
     return instance_obj
 
 def generic_nu_tests_to_bpo_protocols(multi_spiking=None):

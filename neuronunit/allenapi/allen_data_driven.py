@@ -288,18 +288,17 @@ def multi_layered(MU, NGEN, mapping_funct, cell_evaluator2):
 """
 
 
-def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
+def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.125, cxpb=0.6125):
 
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
         offspring_size=MU,
-        eta=25,
+        eta=25.0,
         map_function=map,
         selector_name="IBEA",
         mutpb=mutpb,
         cxpb=cxpb,
-        ELITISM=True,
-        NEURONUNIT=True,
+        neuronunit=True,
     )
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
     return final_pop, hall_of_fame, logs, hist
