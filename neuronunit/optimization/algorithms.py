@@ -39,30 +39,30 @@ import numpy as np
 
 
 def _define_fitness(pop, obj_size):
-    """Re-instanciate the fitness of the individuals for it to matches the
-    evaluation function.
-    """
-    from .optimisations import WSListIndividual
+	''' Re-instanciate the fitness of the individuals for it to matches the
+	evaluation function.
+	'''
+	from .optimisations import WSListIndividual
 
-    new_pop = []
-    if pop:
-        for ind in pop:
-            new_pop.append(WSListIndividual(list(ind), obj_size=obj_size))
+	new_pop = []
+	if pop:
+		for ind in pop:
+			new_pop.append(WSListIndividual(list(ind), obj_size=obj_size))
 
-    return new_pop
+	return new_pop
 
 
 def _evaluate_invalid_fitness(toolbox, population):
-    """Evaluate the individuals with an invalid fitness
+	'''Evaluate the individuals with an invalid fitness
 
-    Returns the count of individuals with invalid fitness
-    """
-    invalid_ind = [ind for ind in population if not ind.fitness.valid]
-    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-    for ind, fit in zip(invalid_ind, fitnesses):
-        ind.fitness.values = fit
+	Returns the count of individuals with invalid fitness
+	'''
+	invalid_ind = [ind for ind in population if not ind.fitness.valid]
+	fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+	for ind, fit in zip(invalid_ind, fitnesses):
+		ind.fitness.values = fit
 
-    return len(invalid_ind)
+	return len(invalid_ind)
 
 
 def _update_history_and_hof(halloffame, history, population):
@@ -226,16 +226,10 @@ def eaAlphaMuPlusLambdaCheckpoint(
         _update_history_and_hof(halloffame, history, population)
         _record_stats(stats, logbook, gen, population, invalid_count)
 
-        # Select the next generation parents
-        if mu >= 90 < 100:
-            parents = toolbox.select(population, int(mu / 4))
-        elif mu >= 100:
-            parents = toolbox.select(population, int(mu / 4))
 
-        else:
-            parents = toolbox.select(population, int(mu / 2))
+        parents = toolbox.select(population, int(mu / 4))
 
-        #parents = filter_parents(parents)
+       
         logger.info(logbook.stream)
 
         if cp_filename and cp_frequency and gen % cp_frequency == 0:
