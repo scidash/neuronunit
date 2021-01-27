@@ -679,7 +679,8 @@ def inject_model_soma(
         model.inject_square_current(**uc)
         vr = model.get_membrane_potential()
         vmr = np.mean(vr)
-        dtc.vmr
+        dtc.vmr = None
+        dtc.vmr = vmr
         del model
         return None, vm_soma, uc, None, dtc
 
