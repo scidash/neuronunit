@@ -36,6 +36,7 @@ from frozendict import frozendict
 from itertools import repeat
 import random
 import quantities as pq
+pq.quantity.PREFERRED = [pq.mV, pq.pA, pq.MOhm, pq.ms, pq.pF, pq.Hz / pq.pA]
 
 import bluepyopt as bpop
 import bluepyopt.ephys as ephys
@@ -516,6 +517,12 @@ def get_binary_file_downloader_html(bin_file_path, file_label="File"):
     href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{os.path.basename(bin_file_path)}">Download {file_label}</a>'
     return href
 
+def rescale(v):
+    v.rescale_preferred()
+    v = v.simplified
+    if np.round(v, 2) != 0:
+        v = np.round(v, 2)
+    return v
 
 def _opt_(
     constraints,
@@ -538,8 +545,8 @@ def _opt_(
         constraints, PARAMS, test_key, model=model_value, score_type=score_type
     )
     model_type = str("_best_fit_") + str(model_value) + "_" + str(test_key) + "_.p"
-    mut = 0.05
-    cxp = 0.4
+    mut = 0.125
+    cxp = 0.6125
     optimization = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
         offspring_size=MU,
@@ -547,7 +554,7 @@ def _opt_(
         selector_name=diversity,
         mutpb=mut,
         cxpb=cxp,
-        ELITISM=True,
+        neuronunit=True
     )
 
     final_pop, hall_of_fame, logs, hist = optimization.run(max_ngen=NGEN)
@@ -559,14 +566,21 @@ def _opt_(
     tests = constraints
     obs_preds = []
     scores = []
+
     for t in tests:
         scores.append(t.judge(model, prediction=t.prediction))
         if "mean" in t.observation.keys():
+            t.observation["mean"] = rescale(t.observation["mean"])
+
             if "mean" in t.prediction.keys():
+                t.prediction["mean"] = rescale(t.prediction["mean"])
+
                 obs_preds.append(
                     (t.name, t.observation["mean"], t.prediction["mean"], scores[-1])
                 )
             if "value" in t.prediction.keys():
+                t.prediction["value"] = rescale(t.prediction["value"])
+
                 obs_preds.append(
                     (t.name, t.observation["mean"], t.prediction["value"], scores[-1])
                 )
@@ -582,10 +596,10 @@ def _opt_(
     opt.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
-    try:
-        df = opt.make_pretty(tests=tests)
-    except:
-        df = pd.DataFrame(obs_preds)
+    #try:
+    #    df = opt.make_pretty(tests=tests)
+    #except:
+    #    df = pd.DataFrame(obs_preds)
 
     best_fit_val = best_ind.fitness.values
     return (

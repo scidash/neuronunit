@@ -291,7 +291,7 @@ def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.125, cxpb=0.6125):
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
         offspring_size=MU,
-        eta=25.0,
+        eta=35.0,
         map_function=map,
         selector_name="IBEA",
         mutpb=mutpb,

@@ -39,30 +39,30 @@ import numpy as np
 
 
 def _define_fitness(pop, obj_size):
-	''' Re-instanciate the fitness of the individuals for it to matches the
-	evaluation function.
-	'''
-	from .optimisations import WSListIndividual
+    """Re-instanciate the fitness of the individuals for it to matches the
+    evaluation function.
+    """
+    from .optimisations import WSListIndividual
 
-	new_pop = []
-	if pop:
-		for ind in pop:
-			new_pop.append(WSListIndividual(list(ind), obj_size=obj_size))
+    new_pop = []
+    if pop:
+        for ind in pop:
+            new_pop.append(WSListIndividual(list(ind), obj_size=obj_size))
 
-	return new_pop
+    return new_pop
 
 
 def _evaluate_invalid_fitness(toolbox, population):
-	'''Evaluate the individuals with an invalid fitness
+    """Evaluate the individuals with an invalid fitness
 
-	Returns the count of individuals with invalid fitness
-	'''
-	invalid_ind = [ind for ind in population if not ind.fitness.valid]
-	fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-	for ind, fit in zip(invalid_ind, fitnesses):
-		ind.fitness.values = fit
+    Returns the count of individuals with invalid fitness
+    """
+    invalid_ind = [ind for ind in population if not ind.fitness.valid]
+    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+    for ind, fit in zip(invalid_ind, fitnesses):
+        ind.fitness.values = fit
 
-	return len(invalid_ind)
+    return len(invalid_ind)
 
 
 def _update_history_and_hof(halloffame, history, population):
@@ -82,7 +82,7 @@ def _record_stats(stats, logbook, gen, population, invalid_count):
     logbook.record(gen=gen, nevals=invalid_count, **record)
 
 
-def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb, gen):
+def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb, gen, NGEN):
     """return the offspring, use toolbox.variate if possible"""
     from deap import tools
 
@@ -93,7 +93,12 @@ def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb, gen):
     for x in range(0, NDIM):
         BOUND_LOW.append(toolbox.uniformparams.args[0][x])
         BOUND_UP.append(toolbox.uniformparams.args[1][x])
-    ETA = NGEN-gen#int(22.50 * 1.0 / np.log(gen))
+    ETA = (NGEN - 1.5*gen)  # int(22.50 * 1.0 / np.log(gen))
+    if ETA<20:
+        ETA = (NGEN - gen)
+    if ETA<1:
+        ETA = 1
+
     toolbox.register(
         "mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=ETA
     )
@@ -118,21 +123,35 @@ def _check_stopping_criteria(criteria, params):
             return True
     else:
         return False
+
 def filter_parents(parents):
-    cntr=0
-    for p in parents:
+    #Remove the genes that represent the cliff
+    #edge. Possibly counter productive.
+    import copy
+    parentsc = copy.copy(parents)
+    orig_len = len(parents)
+    cnt = 0
+    for p in parentsc:
+        flag=False
         for fv in p.fitness.values:
-            if fv==1000.0:
-                cntr+=1
-                break
-    while cntr>0:
-        for i,p in enumerate(parents):
+            if fv == 1000.0:
+                flag=True
+        if flag:
+            cnt += 1
+    while cnt > 0:
+        for i, p in enumerate(parentsc):
+            flag=False
             for fv in p.fitness.values:
-                if fv==1000.0:
-                    del parents[i]
-                    cntr-=1
-                    break
-    return parents
+                if fv == 1000.0:
+                    flag=True
+            if flag:
+                del parentsc[i]
+                cnt -= 1
+    cnt=0
+    while len(parentsc) < orig_len:
+        parentsc.append(parentsc[cnt])
+        cnt+=1
+    return parentsc
 
 
 def eaAlphaMuPlusLambdaCheckpoint(
@@ -207,12 +226,10 @@ def eaAlphaMuPlusLambdaCheckpoint(
     stopping_params = {"gen": gen}
     pbar = tqdm(total=ngen)
     while not (_check_stopping_criteria(stopping_criteria, stopping_params)):
-        if DIM_ETA:
-            offspring = _get_offspring_time_diminishing_eta(
-                parents, toolbox, cxpb, mutpb, gen
-            )
-        else:
-            offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
+        offspring = _get_offspring_time_diminishing_eta(
+            parents, toolbox, cxpb, mutpb, gen, ngen
+        )
+        #offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
 
         population = parents + offspring
 
@@ -221,17 +238,14 @@ def eaAlphaMuPlusLambdaCheckpoint(
         flo = np.sum(halloffame[0].fitness.values)
         stopping_params.update({"hof": flo})
         stop = _check_stopping_criteria(stopping_criteria, stopping_params)
-
         invalid_count = _evaluate_invalid_fitness(toolbox, offspring)
         _update_history_and_hof(halloffame, history, population)
         _record_stats(stats, logbook, gen, population, invalid_count)
-
-
-        parents = toolbox.select(population, int(mu / 4))
-
+        parents = toolbox.select(population, int(mu / 5))
+        parents = filter_parents(parents)
+        population = filter_parents(population)
 
         logger.info(logbook.stream)
-
         if cp_filename and cp_frequency and gen % cp_frequency == 0:
             cp = dict(
                 population=population,

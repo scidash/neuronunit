@@ -104,7 +104,6 @@ class DataTC(object):
         holding_preds = {
             t.name: t.prediction[k]
             for t, k in zip(self.tests, grab_keys)
-            if not hasattr(t, "allen")
         }
         ##
         # This step only partially undoes quantities annoyances.
