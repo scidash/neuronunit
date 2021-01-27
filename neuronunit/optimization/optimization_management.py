@@ -671,6 +671,15 @@ def inject_model_soma(
         #    dtc.spikes = model._backend.spikes
         vm_soma = model.get_membrane_potential()
         dtc.vm_soma = vm_soma
+        ##
+        # Refactor somewhere else, this simulation takes time.
+        # the rmp calculation somewhere else.
+        ##
+        uc['amplitude'] = 0*pq.pA
+        model.inject_square_current(**uc)
+        vr = model.get_membrane_potential()
+        vmr = np.mean(vr)
+        dtc.vmr
         del model
         return None, vm_soma, uc, None, dtc
 
@@ -679,25 +688,8 @@ ALLEN_DURATION = 2000 * pq.ms
 ALLEN_DELAY = 1000 * pq.ms
 
 def extra_features(instance_obj: Any,results:List,vm_used:AnalogSignal) -> Any:
-    ##
-    # Refactor somewhere else, this simulation takes time.
-    # the rmp calculation somewhere else.
-    ##
-    uc = {'amplitude':0*pq.pA,
-          'duration':ALLEN_DURATION,
-          'delay':ALLEN_DELAY,
-          'padding':342.85* pq.ms}
-    if isinstance(instance_obj,type(DataTC())):
-        model = instance_obj.dtc_to_model()
-        model.inject_square_current(**uc)
-
-    else:
-        model = instance_obj        
-        model._backend.inject_square_current(**uc)
-
-    vr = model.get_membrane_potential()
-    vmr = np.mean(vr)
-    results[0]["vr_"] = vmr
+    #if hasattr(instance_obj, "spikes"):
+    #    results[0]["vr_"] = instance_obj.vmr
     if hasattr(instance_obj, "spikes"):
         spikes = instance_obj._backend.spikes
     else:
