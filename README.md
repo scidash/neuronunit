@@ -1,7 +1,7 @@
 ### Circle CI russelljjarvis/optimization build:
 [![Build Status](https://circleci.com/gh/russelljjarvis/neuronunit/tree/optimization.svg?style=svg)](https://app.circleci.com/pipelines/github/russelljjarvis/neuronunit/)
 ### Travis CI scidash/optimization build:
-[![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=optimization)](https://travis-ci.org/scidash/neuronunit)  
+[![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=optimization)](https://travis-ci.org/scidash/neuronunit?branch=optimization)  
 | Master  | Dev |
 | ------------- | ------------- |
 | [![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=master)](https://travis-ci.org/scidash/neuronunit) | [![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=dev)](https://travis-ci.org/scidash/neuronunit)  |
