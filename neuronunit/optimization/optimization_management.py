@@ -409,6 +409,7 @@ def exclude_non_viable_deflections(responses: dict = {}) -> float:
 class NUFeature_standard_suite(object):
     def __init__(self, test, model):
         self.test = test
+        print(self.test)
         self.model = model
         self.score_array = None
 
@@ -739,14 +740,10 @@ def efel_evaluation(
                 "ISI_values": pq.ms,
                 "time_to_first_spike": pq.ms,
                 "time_to_last_spike": pq.ms,
-                "time_to_second_spike": pq.ms,
-                "peak_voltage": pq.mV,
-                "base_voltage": pq.mV,
-                "AHP_depth": pq.mV,
-                "AHP_depth_abs": pq.mV,
-                "base_voltage": pq.mV,
+                "time_to_second_spike": pq.ms
             }
             efel_filter_list = list(default_efel_filter_iterable.keys())
+        #print(len(efel_filter_list))
         results = efel.getMeanFeatureValues(
             [trace3], efel_filter_list, raise_warnings=False
         )
