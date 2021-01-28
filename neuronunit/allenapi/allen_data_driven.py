@@ -286,12 +286,12 @@ def multi_layered(MU, NGEN, mapping_funct, cell_evaluator2):
 """
 
 
-def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.05, cxpb=0.6):
+def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.15, cxpb=0.65):# was 0.625): # was 0.6
 
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
         offspring_size=MU,
-        eta=25,
+        eta=29, #was 35, # was 25
         map_function=map,
         selector_name="IBEA",
         mutpb=mutpb,

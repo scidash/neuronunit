@@ -78,7 +78,7 @@ def _record_stats(stats, logbook, gen, population, invalid_count):
 	record = stats.compile(population) if stats is not None else {}
 	logbook.record(gen=gen, nevals=invalid_count, **record)
 
-def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb,gen):
+def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb,gen, ngen):
 	'''return the offspring, use toolbox.variate if possible'''
 	from deap import tools
 
@@ -93,8 +93,8 @@ def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb,gen):
 	toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=ETA)
 	#toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=ETA, indpb=1.0/NDIM)
 	if hasattr(toolbox, 'variate'):
-		return toolbox.variate(parents, toolbox, cxpb, mutpb)
-	return deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
+		return toolbox.variate(parents, toolbox, cxpb, (1-(gen/ngen))/4.0)
+	return deap.algorithms.varAnd(parents, toolbox, cxpb, (1-(gen/ngen))/4.0)
 
 def _get_offspring(parents, toolbox, cxpb, mutpb):
 	'''return the offspring, use toolbox.variate if possible'''
@@ -126,9 +126,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
 		halloffame=None,
 		cp_frequency=1,
 		cp_filename=None,
-		continue_cp=False,
-		ELITISM=False,
-	NEURONUNIT=False):
+		continue_cp=False):
 	r"""This is the :math:`(~\alpha,\mu~,~\lambda)` evolutionary algorithm
 
 	Args:
@@ -161,6 +159,11 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
 		# Assert that the fitness of the individuals match the evaluator
 		obj_size = len(population[0].fitness.wvalues)
+		###
+		# I suspect these lines help for reasons I
+		###
+
+		# don't understand
 		population = _define_fitness(population, obj_size)
 		parents = _define_fitness(parents, obj_size)
 		_evaluate_invalid_fitness(toolbox, parents)
@@ -186,32 +189,23 @@ def eaAlphaMuPlusLambdaCheckpoint(
 	stopping_params = {"gen": gen}
 	pbar = tqdm(total=ngen)
 	while not(_check_stopping_criteria(stopping_criteria, stopping_params)):
-		#if NEURONUNIT:
-		#	offspring = _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb, gen)
-		#else:
 		offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
-
+		#offspring = _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb,gen,ngen)
 		population = parents + offspring
-
-		if ELITISM:
-			population.append(halloffame[0])
-		flo = np.sum(halloffame[0].fitness.values)
-		stopping_params.update({'hof':flo})
-		stop = _check_stopping_criteria(stopping_criteria, stopping_params)
+		population.append(halloffame[0])
+		#flo = np.sum(copy.copy(halloffame[0].fitness.values))
+		#stopping_params.update({'hof':flo})
+		#stop = _check_stopping_criteria(stopping_criteria, stopping_params)
 
 		invalid_count = _evaluate_invalid_fitness(toolbox, offspring)
 		_update_history_and_hof(halloffame, history, population)
 		_record_stats(stats, logbook, gen, population, invalid_count)
-
 		# Select the next generation parents
-		if NEURONUNIT:
-			if mu>=90:
-				parents = toolbox.select(population, int(mu/5))
-			else:
-				parents = toolbox.select(population, int(mu/3))
+		##
+		# was /4
+		##
+		parents = toolbox.select(population, int(mu/3))
 
-		else:
-			parents = toolbox.select(population, mu)
 		logger.info(logbook.stream)
 
 		if(cp_filename and cp_frequency and

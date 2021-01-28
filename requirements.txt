@@ -32,4 +32,4 @@ fsspec>=0.3.3
 cython
 git+https://github.com/russelljjarvis/sciunit@dev
 git+https://github.com/russelljjarvis/BluePyOpt@neuronunit_reduced_cells
-git+https://github.com/russelljjarvis/eFEL
+efel

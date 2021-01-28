@@ -246,38 +246,23 @@ class DataTC(object):
         if self.jithub:
             if str("MAT") in self.backend:
                 model = model_classes.MATModel()
-                model._backend.attrs = self.attrs
-                model.attrs = self.attrs
-                model.params = self.to_bpo_param(self.attrs)
-                assert len(self.attrs)
-                assert len(model.attrs)
-                return model
             if str("IZHI") in self.backend:
                 model = model_classes.IzhiModel()
-                model._backend.attrs = self.attrs
-                model.attrs = self.attrs
-                model.params = self.to_bpo_param(self.attrs)
-                assert len(self.attrs)
-                assert len(model.attrs)
-                return model
             if str("ADEXP") in self.backend:
                 model = model_classes.ADEXPModel()
-                model._backend.attrs = self.attrs
-                model.attrs = self.attrs
-                model.params = self.to_bpo_param(self.attrs)
-                assert len(self.attrs)
-                assert len(model.attrs)
-                return model
+
+            model.set_attrs(self.attrs)
+            self.params = model.params = self.to_bpo_param(self.attrs)
+            assert len(self.attrs)
+            assert len(model.attrs)
+            return model
 
         else:
             from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
 
             model = VeryReducedModel(backend=self.backend, attrs=self.attrs)
-            if "GLIF" in self.backend:
-                model._backend.set_attrs(self.attrs)
-                model.attrs = self.attrs
-            else:
-                model.set_attrs(self.attrs)
+
+            model.set_attrs(self.attrs)
             if model.attrs is None:
                 model.attrs = self.attrs
             return model
