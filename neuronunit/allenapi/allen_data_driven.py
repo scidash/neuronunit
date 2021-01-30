@@ -276,23 +276,9 @@ def opt_setup_two(
     return cell_evaluator, template_model
 
 
-"""
-def multi_layered(MU, NGEN, mapping_funct, cell_evaluator2):
-    optimisation = bpop.optimisations.DEAPOptimisation(
-        evaluator=cell_evaluator2,
-        offspring_size=MU,
-        map_function=map,
-        selector_name="IBEA",
-        mutpb=0.05,
-        cxpb=0.6,
-        current_fixed=from_outer,
-    )
-    final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
-    return final_pop, hall_of_fame, logs, hist
-"""
 
 
-def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.1, cxpb=1):# was 0.625): # was 0.6
+def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.1, cxpb=1,neuronunit=False):# was 0.625): # was 0.6
 
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
@@ -302,6 +288,7 @@ def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.1, cxpb=1):# was 0
         selector_name="IBEA",
         mutpb=mutpb,
         cxpb=cxpb,
+        neuronunit=neuronunit
     )
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
     return final_pop, hall_of_fame, logs, hist

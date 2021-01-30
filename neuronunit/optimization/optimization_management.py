@@ -66,6 +66,8 @@ from neuronunit.tests import VmTest
 
 PASSIVE_DURATION = 500.0 * pq.ms
 PASSIVE_DELAY = 200.0 * pq.ms
+ALLEN_DURATION = 2000 * pq.ms
+ALLEN_DELAY = 1000 * pq.ms
 
 
 class TSD(dict):
@@ -175,9 +177,9 @@ def write_opt_to_nml(path, param_dict) -> None:
     fopen.close()
     return
 
-
+"""
 def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
-    """
+    '''
     --args:
         :param object dtc:
         :param object Rheobase Test Class:
@@ -185,7 +187,7 @@ def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Dat
     -- Synopsis: This is used to recover/produce
      a rheobase test class instance,
      given unknown experimental observations.
-    """
+    '''
     place_holder = {"mean": None * pq.pA}
     backend_ = dtc.backend
     rtest = RheobaseTest(observation=place_holder, name="RheobaseTest")
@@ -204,7 +206,7 @@ def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Dat
         # this is the fastest way to filter out a gene
         dtc.rheobase = None
     return dtc
-
+"""
 
 def get_new_rtest(dtc: DataTC) -> RheobaseTest:
     place_holder = {"mean": 10 * pq.pA}
@@ -256,15 +258,15 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
         if bind_vm:
             dtc.vmrh = temp_vm
             # rheobase does exist but lets filter out this bad gene.
-        return dtc
-    else:
+    return dtc
+    #else:
         # otherwise, if no observation is available, or if rheobase test score is not desired.
         # Just generate rheobase predictions, giving the models the freedom of rheobase
         # discovery without test taking.
-        dtc = get_rh(dtc, rtest, bind_vm=bind_vm)
-        if bind_vm:
-            dtc.vmrh = temp_vm
-    return dtc
+        #dtc = get_rh(dtc, rtest, bind_vm=bind_vm)
+    #if bind_vm:
+    #    dtc.vmrh = temp_vm
+    #return dtc
 
 
 def basic_expVar(trace1, trace2):
@@ -332,28 +334,6 @@ def multi_spiking_feature_extraction(
 
     return dtc
 
-
-"""
-def rekeyed(dtc: Any = object()) -> Any:
-    rekey = {}
-    if hasattr(dtc, "allen_30"):
-        for k, v in dtc.allen_30.items():
-            rekey[str(k) + str("_3.0x")] = v
-    if hasattr(dtc, "allen_15"):
-        for k, v in dtc.allen_15.items():
-            rekey[str(k) + str("_1.5x")] = v
-    if hasattr(dtc, "efel_30"):
-        for k, v in dtc.efel_30[0].items():
-            rekey[str(k) + str("_3.0x")] = v
-    if hasattr(dtc, "efel_15"):
-        if dtc.efel_15 is not None:
-            for k, v in dtc.efel_15[0].items():
-                rekey[str(k) + str("_1.5x")] = v
-        else:
-            rekey = None
-    dtc.everything = rekey
-    return dtc
-"""
 
 
 def constrain_ahp(vm_used: Any = object()) -> dict:
@@ -540,7 +520,7 @@ def _opt_(
     score_type=RelativeDifferenceScore,
 ):
     """
-    used with or without streamlit
+    An interface for optimizing with neuron unit ephys type tests
     """
 
     if type(constraints) is not type(list()):
@@ -712,16 +692,14 @@ def inject_model_soma(
         return None, vm_soma, uc, None, dtc
 
 #from sciunit.models import RunnableModel
-ALLEN_DURATION = 2000 * pq.ms
-ALLEN_DELAY = 1000 * pq.ms
 
-def extra_features(instance_obj: Any,results:List,vm_used:AnalogSignal,target_vm:AnalogSignal) -> Any:
+def extra_features(instance_obj: Any,results:List,vm_used:AnalogSignal,target_vm:None) -> Any:
     #if hasattr(instance_obj, "spikes"):
     #    results[0]["vr_"] = instance_obj.vmr
     if target_vm is not None:
         results[0]["var_expl"] = basic_expVar(vm_used,target_vm)
-    else:
-        results[0]["var_expl"] = basic_expVar(target_vm,target_vm)
+    #else:
+    #    results[0]["var_expl"] = basic_expVar(target_vm,target_vm)
     if hasattr(instance_obj, "spikes"):
         spikes = instance_obj.spikes
 
@@ -752,8 +730,9 @@ def efel_evaluation(
         efel_filter_list = list(efel_filter_iterable.keys())
     if isinstance(efel_filter_iterable, type(list())):
         efel_filter_list = efel_filter_iterable
-    if "var_expl" in efel_filter_iterable.keys():
-        target_vm = efel_filter_iterable["var_expl"]
+    if "extra_tests" in efel_filter_iterable.keys():
+        if "var_expl" in efel_filter_iterable["extra_tests"].keys():
+            target_vm = efel_filter_iterable["extra_tests"]["var_expl"]
     else:
         target_vm = None
     vm_used = instance_obj.vm_soma
