@@ -8,7 +8,6 @@ if SILENT:
     warnings.filterwarnings("ignore")
 
 
-
 # import time
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
 import dask
@@ -34,6 +33,7 @@ import random
 
 
 import quantities as pq
+
 pq.quantity.PREFERRED = [pq.mV, pq.pA, pq.MOhm, pq.ms, pq.pF, pq.Hz / pq.pA]
 
 import efel
@@ -111,7 +111,7 @@ class TSD(dict):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def random_p(model_type:str="")->dict:
+def random_p(model_type: str = "") -> dict:
     """
     -- Synopsis: generate random parameter sets.
     This is used to create varied and unpredictible
@@ -133,7 +133,9 @@ def random_p(model_type:str="")->dict:
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def process_rparam(model_type:str="", free_parameters:dict=None)-> Union[DataTC, dict]:
+def process_rparam(
+    model_type: str = "", free_parameters: dict = None
+) -> Union[DataTC, dict]:
     """
     -- Synopsis: generate random parameter sets.
     This is used to create varied and unpredictible
@@ -165,7 +167,7 @@ def write_models_for_nml_db(dtc: DataTC):
         writer.writerows(df)
 
 
-def write_opt_to_nml(path: str, param_dict:dict):
+def write_opt_to_nml(path: str, param_dict: dict):
     """
     -- Inputs: desired file path, model parameters to encode in NeuroML2
     -- Outputs: NeuroML2 file.
@@ -189,6 +191,8 @@ def write_opt_to_nml(path: str, param_dict:dict):
     more_attributes.export_to_file(fopen)
     fopen.close()
     return
+
+
 """
 #Depricated
 def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
@@ -222,8 +226,10 @@ def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Dat
         dtc.rheobase = None
     return dtc
 """
+
+
 def eval_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
-    '''
+    """
     --Synpopsis: This approach should be redundant, but for
     some reason this method works when others fail.
     --args:
@@ -234,7 +240,7 @@ def eval_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Da
     -- Synopsis: This is used to recover/produce
      a rheobase test class instance,
      given unknown experimental observations.
-    '''
+    """
     assert len(dtc.attrs)
     model = dtc.dtc_to_model()
     rtest.params["injected_square_current"] = {}
@@ -249,6 +255,7 @@ def eval_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Da
         # this is the fastest way to filter out a gene
         dtc.rheobase = None
     return dtc
+
 
 def get_new_rtest(dtc: DataTC) -> RheobaseTest:
     place_holder = {"mean": 10 * pq.pA}
@@ -300,17 +307,17 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
         if bind_vm:
             dtc.vmrh = temp_vm
     if rtest is None:
-    	raise Exception('rheobase test is still None despite efforts')
-            # rheobase does exist but lets filter out this bad gene.
+        raise Exception("rheobase test is still None despite efforts")
+        # rheobase does exist but lets filter out this bad gene.
     return dtc
-    #else:
-        # otherwise, if no observation is available, or if rheobase test score is not desired.
-        # Just generate rheobase predictions, giving the models the freedom of rheobase
-        # discovery without test taking.
-        #dtc = get_rh(dtc, rtest, bind_vm=bind_vm)
-    #if bind_vm:
+    # else:
+    # otherwise, if no observation is available, or if rheobase test score is not desired.
+    # Just generate rheobase predictions, giving the models the freedom of rheobase
+    # discovery without test taking.
+    # dtc = get_rh(dtc, rtest, bind_vm=bind_vm)
+    # if bind_vm:
     #    dtc.vmrh = temp_vm
-    #return dtc
+    # return dtc
 
 
 def basic_expVar(trace1, trace2):
@@ -356,15 +363,14 @@ def multi_spiking_feature_extraction(
     """
     if solve_for_current is None:
         dtc = inject_model_soma(dtc)
-        if dtc.vm_soma is None:# or dtc.exclude is True:
+        if dtc.vm_soma is None:  # or dtc.exclude is True:
             return dtc
         dtc = efel_evaluation(dtc, efel_filter_iterable)
         dtc.vm_soma = None
     else:
-        dtc = inject_model_soma(dtc,
-                            solve_for_current=solve_for_current)
+        dtc = inject_model_soma(dtc, solve_for_current=solve_for_current)
 
-        if dtc.vm_soma is None:# or dtc.exclude is True:
+        if dtc.vm_soma is None:  # or dtc.exclude is True:
             dtc.efel = None
             return dtc
 
@@ -377,7 +383,6 @@ def multi_spiking_feature_extraction(
         dtc.efel = None
 
     return dtc
-
 
 
 def constrain_ahp(vm_used: Any = object()) -> dict:
@@ -489,11 +494,11 @@ class NUFeature_standard_suite(object):
 
 
 def make_evaluator(
-    nu_tests:Iterable,
-    PARAMS:Iterable,
-    experiment:str=str("Neocortex pyramidal cell layer 5-6"),
-    model_type:str=str("IZHI"),
-    score_type:Any=RelativeDifferenceScore,
+    nu_tests: Iterable,
+    PARAMS: Iterable,
+    experiment: str = str("Neocortex pyramidal cell layer 5-6"),
+    model_type: str = str("IZHI"),
+    score_type: Any = RelativeDifferenceScore,
 ) -> Union[Any, Any, Any, List[Any]]:
     """
     --Synopsis: make a BluePyOpt genetic algorithm evaluator
@@ -557,20 +562,22 @@ def get_binary_file_downloader_html(bin_file_path, file_label="File"):
     href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{os.path.basename(bin_file_path)}">Download {file_label}</a>'
     return href
 
-def rescale(v:pq):
-    '''
+
+def rescale(v: pq):
+    """
     --Synopsis: default rescaling quantities SI units are often not desirable.
     this method helps circumnavigates quantities defaults, instead
     the method tries to apply neuroscience relevant units as a first preference.
     A constant "rescale preffered was defined as a CONSTANT at the top of this file"
     --params: v is a qauntities type object (often a float multiplied by a si unit)
     --returns rescaled units
-    '''
+    """
     v.rescale_preferred()
     v = v.simplified
     if np.round(v, 2) != 0:
         v = np.round(v, 2)
     return v
+
 
 def _opt_(
     constraints,
@@ -602,7 +609,7 @@ def _opt_(
         selector_name=diversity,
         mutpb=mut,
         cxpb=cxp,
-        neuronunit=True
+        neuronunit=True,
     )
 
     final_pop, hall_of_fame, logs, hist = optimization.run(max_ngen=NGEN)
@@ -644,9 +651,9 @@ def _opt_(
     opt.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
-    #try:
+    # try:
     #    df = opt.make_pretty(tests=tests)
-    #except:
+    # except:
     #    df = pd.DataFrame(obs_preds)
 
     best_fit_val = best_ind.fitness.values
@@ -689,8 +696,11 @@ def public_opt(
     )
     return opt, obs_preds, df
 
+
 ALLEN_DELAY = 1000.0 * pq.ms
 ALLEN_DURATION = 2000.0 * pq.ms
+
+
 def inject_model_soma(
     dtc: DataTC,
     figname=None,
@@ -733,20 +743,20 @@ def inject_model_soma(
             "amplitude": solve_for_current,
             "duration": ALLEN_DURATION,
             "delay": ALLEN_DELAY,
-            "padding":342.85* pq.ms
+            "padding": 342.85 * pq.ms,
         }
-        #model = dtc.dtc_to_model()
-        #temp = model.attrs
+        # model = dtc.dtc_to_model()
+        # temp = model.attrs
         model.inject_square_current(**uc)
         n_spikes = model.get_spike_count()
         if n_spikes != dtc.spk_count:
             dtc.exclude = True
         else:
             dtc.exclude = False
-        #if hasattr(dtc, "spikes"):
+        # if hasattr(dtc, "spikes"):
         #    spikes = model._backend.spikes
-        #assert model._backend.spikes == n_spikes
-        #dtc.spikes = n_spikes
+        # assert model._backend.spikes == n_spikes
+        # dtc.spikes = n_spikes
         vm_soma = model.get_membrane_potential()
         dtc.vm_soma = vm_soma
         ##
@@ -755,19 +765,22 @@ def inject_model_soma(
         ##
         return dtc
 
-def still_more_features(instance_obj: Any,results:List,vm_used:AnalogSignal,target_vm:None) -> Any:
+
+def still_more_features(
+    instance_obj: Any, results: List, vm_used: AnalogSignal, target_vm: None
+) -> Any:
     """
     -- Synopsis: Measure resting membrane potential and variance explained
     as features, so that they can be used
     as features to optimize with.
     """
-    if hasattr(instance_obj,"dtc_to_model"):
+    if hasattr(instance_obj, "dtc_to_model"):
         model = instance_obj
         model = dtc.dtc_to_model()
         model._backend.attrs = dtc.attrs
     else:
         dtc = instance_obj
-    uc['amplitude'] = 0*pq.pA
+    uc["amplitude"] = 0 * pq.pA
     model.inject_square_current(**uc)
     vr = model.get_membrane_potential()
     vmr = np.mean(vr)
@@ -776,13 +789,16 @@ def still_more_features(instance_obj: Any,results:List,vm_used:AnalogSignal,targ
     del model
 
     if target_vm is not None:
-        results[0]["var_expl"] = basic_expVar(vm_used,target_vm)
-    if vm_used[-1]>0:
+        results[0]["var_expl"] = basic_expVar(vm_used, target_vm)
+    if vm_used[-1] > 0:
         spikes_ = spikes[0:-2]
         spikes = spikes_
     results[0]["vr_"] = instance_obj.vmr
 
-def spike_time_errors(instance_obj: Any,results:List,vm_used:AnalogSignal,target_vm:None) -> Any:
+
+def spike_time_errors(
+    instance_obj: Any, results: List, vm_used: AnalogSignal, target_vm: None
+) -> Any:
     """
     -- Synopsis: Generate simple errors simply based on spike times.
     """
@@ -792,7 +808,8 @@ def spike_time_errors(instance_obj: Any,results:List,vm_used:AnalogSignal,target
         spikes = threshold_detection(vm_used)
     for index, tc in enumerate(spikes):
         results[0]["spike_" + str(index)] = float(tc)
-    return instance_obj,results
+    return instance_obj, results
+
 
 def efel_evaluation(
     instance_obj: Any, efel_filter_iterable: Iterable = None, current: float = None
@@ -864,26 +881,29 @@ def efel_evaluation(
                 "ISI_values": pq.ms,
                 "time_to_first_spike": pq.ms,
                 "time_to_last_spike": pq.ms,
-                "time_to_second_spike": pq.ms
+                "time_to_second_spike": pq.ms,
             }
             efel_filter_list = list(default_efel_filter_iterable.keys())
-        #print(len(efel_filter_list))
+        # print(len(efel_filter_list))
         results = efel.getMeanFeatureValues(
             [trace3], efel_filter_list, raise_warnings=False
         )
 
         efel.reset()
-        #instance_obj = apply_units_to_efel(instance_obj,
+        # instance_obj = apply_units_to_efel(instance_obj,
         #                                    efel_filter_iterable)
-        instance_obj,results = spike_time_errors(instance_obj,results,vm_used,target_vm=target_vm)
+        instance_obj, results = spike_time_errors(
+            instance_obj, results, vm_used, target_vm=target_vm
+        )
 
         instance_obj.efel = None
         instance_obj.efel = results[0]
         try:
             assert hasattr(instance_obj, "efel")
         except:
-            raise Exception('efel object has no efel results list attribute')
+            raise Exception("efel object has no efel results list attribute")
     return instance_obj
+
 
 def generic_nu_tests_to_bpo_protocols(multi_spiking=None):
     pass
@@ -1022,7 +1042,7 @@ def neutral_values(keyed: dict = {}) -> dict:
 
 
 def initialise_test(v: Any, rheobase: Any = None) -> dict:
-    '''
+    """
     -- Synpopsis:
     Create appropriate square wave stimulus for various
     Different square pulse current injection protocols.
@@ -1031,7 +1051,7 @@ def initialise_test(v: Any, rheobase: Any = None) -> dict:
     # unify it with BPO protocol code.
     # It is already a bit similar.
     ###
-    '''
+    """
     if not isinstance(v, Iterable):
         v = [v]
     v = switch_logic(v)

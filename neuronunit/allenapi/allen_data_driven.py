@@ -30,7 +30,7 @@ from neuronunit.tests import (
     RestingPotentialTest,
     InputResistanceTest,
     TimeConstantTest,
-    FITest
+    FITest,
 )
 
 
@@ -201,7 +201,7 @@ class NUFeatureAllenMultiSpike(object):
 
             if np.nan == delta or delta == np.inf:
                 delta = 1000.0
-            #print(self.test.name,'delta',delta)
+            # print(self.test.name,'delta',delta)
 
             return delta
         else:
@@ -217,11 +217,11 @@ class NUFeatureAllenMultiSpike(object):
                     delta = 1000.0
             else:
                 delta = 1000.0
-            #if np.nan == delta or delta == np.inf:
+            # if np.nan == delta or delta == np.inf:
             #    delta = np.abs(float(score_gene.raw))
             if np.nan == delta or delta == np.inf:
                 delta = 1000.0
-            #print(self.test.name,'delta',delta)
+            # print(self.test.name,'delta',delta)
 
             return delta
 
@@ -276,19 +276,19 @@ def opt_setup_two(
     return cell_evaluator, template_model
 
 
-
-
-def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.1, cxpb=1,neuronunit=False):# was 0.625): # was 0.6
+def opt_exec(
+    MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.1, cxpb=1, neuronunit=False
+):  # was 0.625): # was 0.6
 
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
         offspring_size=MU,
-        eta=29, #was 35, # was 25
+        eta=29,  # was 35, # was 25
         map_function=map,
         selector_name="IBEA",
         mutpb=mutpb,
         cxpb=cxpb,
-        neuronunit=neuronunit
+        neuronunit=neuronunit,
     )
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
     return final_pop, hall_of_fame, logs, hist
@@ -313,25 +313,19 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
     opt.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
-    #for k,v in cell_evaluator.cell_model.attrs.items():
+    # for k,v in cell_evaluator.cell_model.attrs.items():
     #    print(opt.attrs[k],'opt attrs',v,'in cell evaluator')
-        #assert opt.attrs[k] == v
-    print(best_ind,'the gene')
+    # assert opt.attrs[k] == v
+    print(best_ind, "the gene")
     target = copy.copy(opt)
     if "vm_soma" in suite.traces.keys():
         target.vm_soma = suite.traces["vm_soma"]
-    # else:  # backwards compatibility
-    #    target.vm_soma = suite.traces["vm15"]
     opt.seeded_current = target_current["value"]
     opt.spk_count = spk_count
-    #opt = opt.attrs_to_params()
-
     target.seeded_current = target_current["value"]
     target.spk_count = spk_count
-    _, _, _, _, target = inject_model_soma(
-        target, solve_for_current=target_current["value"]
-    )
-    _, _, _, _, opt = inject_model_soma(opt, solve_for_current=target_current["value"])
+    target = inject_model_soma(target, solve_for_current=target_current["value"])
+    opt = inject_model_soma(opt, solve_for_current=target_current["value"])
 
     return opt, target, scores, obs_preds, df
 
