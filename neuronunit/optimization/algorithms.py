@@ -77,6 +77,7 @@ def _record_stats(stats, logbook, gen, population, invalid_count):
 	'''Update the statistics with the new population'''
 	record = stats.compile(population) if stats is not None else {}
 	logbook.record(gen=gen, nevals=invalid_count, **record)
+
 from deap import tools
 def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb,gen, ngen):
 	'''return the offspring, use toolbox.variate if possible'''
@@ -89,19 +90,29 @@ def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb,gen, ngen)
 	for x in range(0,len(parents[0])):
 		BOUND_LOW.append(toolbox.uniformparams.args[0][x])
 		BOUND_UP.append(toolbox.uniformparams.args[1][x])
-	ETA = int(25.0*(5/gen))
+	ETA = int(30.0*(1-(gen/ngen)))
 	toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=ETA)
-	#toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=ETA, indpb=1.0/NDIM)
+	toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=ETA, indpb=1.0/NDIM)
+	if (1-(gen/ngen))/2.0>0.05:
+		mutpb = (1-(gen/ngen))/2.0
+	else:
+		mutpb = 0.05
+	if (1-(gen/ngen))>0.4:
+		cxpb = (1-(gen/ngen))/1.1
+	else:
+		cxpb = 0.4
+
 	if hasattr(toolbox, 'variate'):
-		return toolbox.variate(parents, toolbox, cxpb, (1-(gen/ngen))/4.0)
-	return deap.algorithms.varAnd(parents, toolbox, cxpb, (1-(gen/ngen))/4.0)
+
+		return toolbox.variate(parents, toolbox, cxpb, mutpb)
+	return deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
 
 def _get_offspring(parents, toolbox, cxpb, mutpb):
-    """return the offspring, use toolbox.variate if possible"""
+	'''return the offspring, use toolbox.variate if possible'''
 
-    if hasattr(toolbox, "variate"):
-        return toolbox.variate(parents, toolbox, cxpb, mutpb)
-    return deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
+	if hasattr(toolbox, 'variate'):
+		return toolbox.variate(parents, toolbox, cxpb, mutpb)
+	return deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
 
 
 def _check_stopping_criteria(criteria, params):
@@ -114,8 +125,11 @@ def _check_stopping_criteria(criteria, params):
         return False
 
 def filter_parents(parents):
+    """
+    --synopsis: This method does not work yet.
     #Remove the genes that represent the cliff
     #edge. Possibly counter productive.
+    """
     import copy
     parentsc = copy.copy(parents)
     orig_len = len(parents)
@@ -157,41 +171,36 @@ def eaAlphaMuPlusLambdaCheckpoint(
 		continue_cp=False):
 	r"""This is the :math:`(~\alpha,\mu~,~\lambda)` evolutionary algorithm
 
-    Args:
-            population(list of deap Individuals)
-            toolbox(deap Toolbox)
-            mu(int): Total parent population size of EA
-            cxpb(float): Crossover probability
-            mutpb(float): Mutation probability
-            ngen(int): Total number of generation to run
-            stats(deap.tools.Statistics): generation of statistics
-            halloffame(deap.tools.HallOfFame): hall of fame
-            cp_frequency(int): generations between checkpoints
-            cp_filename(string): path to checkpoint filename
-            continue_cp(bool): whether to continue
-    """
+	Args:
+		population(list of deap Individuals)
+		toolbox(deap Toolbox)
+		mu(int): Total parent population size of EA
+		cxpb(float): Crossover probability
+		mutpb(float): Mutation probability
+		ngen(int): Total number of generation to run
+		stats(deap.tools.Statistics): generation of statistics
+		halloffame(deap.tools.HallOfFame): hall of fame
+		cp_frequency(int): generations between checkpoints
+		cp_filename(string): path to checkpoint filename
+		continue_cp(bool): whether to continue
+	"""
 
-    if cp_filename:
-        cp_filename_tmp = cp_filename + ".tmp"
+	if cp_filename:
+		cp_filename_tmp = cp_filename + '.tmp'
 
-    if continue_cp:
-        # A file name has been given, then load the data from the file
-        cp = pickle.load(open(cp_filename, "rb"))
-        population = cp["population"]
-        parents = cp["parents"]
-        start_gen = cp["generation"]
-        halloffame = cp["halloffame"]
-        logbook = cp["logbook"]
-        history = cp["history"]
-        random.setstate(cp["rndstate"])
+	if continue_cp:
+		# A file name has been given, then load the data from the file
+		cp = pickle.load(open(cp_filename, "rb"))
+		population = cp["population"]
+		parents = cp["parents"]
+		start_gen = cp["generation"]
+		halloffame = cp["halloffame"]
+		logbook = cp["logbook"]
+		history = cp["history"]
+		random.setstate(cp["rndstate"])
 
 		# Assert that the fitness of the individuals match the evaluator
 		obj_size = len(population[0].fitness.wvalues)
-		###
-		# I suspect these lines help for reasons I
-		###
-
-		# don't understand
 		population = _define_fitness(population, obj_size)
 		parents = _define_fitness(parents, obj_size)
 		_evaluate_invalid_fitness(toolbox, parents)
@@ -217,12 +226,10 @@ def eaAlphaMuPlusLambdaCheckpoint(
 	stopping_params = {"gen": gen}
 	pbar = tqdm(total=ngen)
 	while not(_check_stopping_criteria(stopping_criteria, stopping_params)):
-		offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
-		#offspring = _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb,gen,ngen)
-		population = parents + offspring
-		population.append(halloffame[0])
-		#flo = np.sum(copy.copy(halloffame[0].fitness.values))
-		#stopping_params.update({'hof':flo})
+		#offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
+		offspring = _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb,gen,ngen)
+		population = parents + offspring + [halloffame[0]]
+
 		stop = _check_stopping_criteria(stopping_criteria, stopping_params)
 
 		invalid_count = _evaluate_invalid_fitness(toolbox, offspring)
@@ -232,8 +239,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
 		##
 		# was /4
 		##
-		parents = toolbox.select(population, int(mu/3))
-
+		parents = toolbox.select(population, int(mu/2.5))
 		logger.info(logbook.stream)
 
 		if(cp_filename and cp_frequency and
