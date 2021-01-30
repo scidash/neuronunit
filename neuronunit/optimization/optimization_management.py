@@ -447,12 +447,24 @@ class NUFeature_standard_suite(object):
 
 
 def make_evaluator(
-    nu_tests,
-    PARAMS,
-    experiment=str("Neocortex pyramidal cell layer 5-6"),
-    model=str("IZHI"),
-    score_type=RelativeDifferenceScore,
+    nu_tests:Iterable,
+    PARAMS:Iterable,
+    experiment:str=str("Neocortex pyramidal cell layer 5-6"),
+    model_type:str=str("IZHI"),
+    score_type:Any=RelativeDifferenceScore,
 ) -> Union[Any, Any, Any, List[Any]]:
+    """
+    --Synopsis: make a BluePyOpt genetic algorithm evaluator
+    ie an object that has a model attribute,
+    and an score calculator method.
+    Using these attributes the evaluator
+    can update parameters on the model,
+    and then can calculate appropriate objective
+    scores. The genetic algorithm can thus use this
+    object to evolve genes, but also the human user of the
+    GA can use the evaluator to find the fitness of any
+    particular model parameterization.
+    """
 
     if type(nu_tests) is type(dict()):
         nu_tests = list(nu_tests.values())
@@ -495,7 +507,9 @@ def make_evaluator(
 
 def get_binary_file_downloader_html(bin_file_path, file_label="File"):
     """
-    Used with streamlit
+    --Synopsis: Intended to be used with streamlit/frontend.
+    Allows someone to download a pickle version of
+    python models that are output from the optimization process.
     """
     with open(bin_file_path, "rb") as f:
         data = f.read()
@@ -504,6 +518,13 @@ def get_binary_file_downloader_html(bin_file_path, file_label="File"):
     return href
 
 def rescale(v):
+    '''
+    --Synopsis: default rescaling units are often not desirable.
+    this method helps circumnavigate defaults.
+    A constant "rescale preffered was defined as a CONSTANT at the top of this file"
+    --params: v is a qauntities type object (often a float multiplied by a si unit)
+    --returns rescaled units
+    '''
     v.rescale_preferred()
     v = v.simplified
     if np.round(v, 2) != 0:
@@ -522,7 +543,7 @@ def _opt_(
     score_type=RelativeDifferenceScore,
 ):
     """
-    An interface for optimizing with neuron unit ephys type tests
+    --Synopsis: A private interface for optimizing with neuron unit ephys type tests
     """
 
     if type(constraints) is not type(list()):
@@ -611,6 +632,10 @@ def public_opt(
     diversity,
     score_type=RelativeDifferenceScore,
 ):
+    """
+    --Synopsis: A public interface for optimizing with neuron unit ephys type tests
+    calls _opt_
+    """
     _, _, _, _, _, _, opt, obs_preds, df = _opt_(
         constraints=constraints,
         PARAMS=PARAMS,
@@ -635,9 +660,12 @@ def inject_model_soma(
     from neuronunit.tests.target_spike_current import SpikeCountSearch
 
     """
-    -- args: dtc
+    -- args: dtc: containing spike number attribute,
+    the number of spikes wanted.
+    if solve_for_current is True find the current that causes the
+    wanted spike number.
     -- outputs: voltage at 3.0 rheobase,
-                voltage at 1.5 rheobase,
+                voltage that causes a desired number of spikes,
                 current Injection Parameters,
                 dtc
     -- Synopsis:
@@ -683,34 +711,44 @@ def inject_model_soma(
         # the rmp calculation somewhere else.
         ##
         '''
-        uc['amplitude'] = 0*pq.pA
-        model.inject_square_current(**uc)
-        vr = model.get_membrane_potential()
-        vmr = np.mean(vr)
-        dtc.vmr = None
-        dtc.vmr = vmr
-        del model
         '''
         return None, vm_soma, uc, None, dtc
 
-#from sciunit.models import RunnableModel
+def still_more_features(instance_obj: Any,results:List,vm_used:AnalogSignal,target_vm:None) -> Any:
+    """
+    -- Synopsis: Measure resting membrane potential and variance explained
+    as features, so that they can be used
+    as features to optimize with.
+    """
+    if hasattr(instance_obj,"dtc_to_model"):
+        model = instance_obj
+        model = dtc.dtc_to_model()
+        model._backend.attrs = dtc.attrs
+    else:
+        dtc = instance_obj
+    uc['amplitude'] = 0*pq.pA
+    model.inject_square_current(**uc)
+    vr = model.get_membrane_potential()
+    vmr = np.mean(vr)
+    dtc.vmr = None
+    dtc.vmr = vmr
+    del model
 
-def extra_features(instance_obj: Any,results:List,vm_used:AnalogSignal,target_vm:None) -> Any:
-    #if hasattr(instance_obj, "spikes"):
-    #    results[0]["vr_"] = instance_obj.vmr
     if target_vm is not None:
         results[0]["var_expl"] = basic_expVar(vm_used,target_vm)
-    #else:
-    #    results[0]["var_expl"] = basic_expVar(target_vm,target_vm)
+    if vm_used[-1]>0:
+        spikes_ = spikes[0:-2]
+        spikes = spikes_
+    results[0]["vr_"] = instance_obj.vmr
+
+def spike_time_errors(instance_obj: Any,results:List,vm_used:AnalogSignal,target_vm:None) -> Any:
+    """
+    -- Synopsis: Generate simple errors simply based on spike times.
+    """
     if hasattr(instance_obj, "spikes"):
         spikes = instance_obj.spikes
-
     else:
         spikes = threshold_detection(vm_used)
-        #if vm_used[-1]>0:
-        #    spikes_ = spikes[0:-2]
-        #    spikes = spikes_
-            #del spikes[-1]
     for index, tc in enumerate(spikes):
         results[0]["spike_" + str(index)] = float(tc)
     return instance_obj,results
@@ -791,7 +829,7 @@ def efel_evaluation(
         efel.reset()
         #instance_obj = apply_units_to_efel(instance_obj,
         #                                    efel_filter_iterable)
-        instance_obj,results = extra_features(instance_obj,results,vm_used,target_vm=target_vm)
+        instance_obj,results = spike_time_errors(instance_obj,results,vm_used,target_vm=target_vm)
 
         instance_obj.efel = None
         instance_obj.efel = results[0]
