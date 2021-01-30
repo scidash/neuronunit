@@ -187,10 +187,9 @@ class RheobaseTest(VmTest):
                         #if vm[-1]>0 and n_spikes==1:
                             # this means current was not strong enough
                             # to evoke an early spike.
-                            # the current did not come down again.
+                            # the voltage deflection did not come back down below zero.
                             # treat this as zero spikes because a slightly higher
                             # spike will give a cleaner rheobase waveform.
-                        #    n_spikes = 0
                 if n_spikes == self.target_number_spikes:
 
                     self.n_spikes = n_spikes

@@ -189,11 +189,12 @@ def write_opt_to_nml(path: str, param_dict:dict):
     more_attributes.export_to_file(fopen)
     fopen.close()
     return
-
 """
-Depricated
+#Depricated
 def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
     '''
+    --Synpopsis: This approach should be redundant, but for
+    some reason this method works when others fail.
     --args:
         :param object dtc:
         :param object Rheobase Test Class:
@@ -203,7 +204,7 @@ def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Dat
      given unknown experimental observations.
     '''
     place_holder = {"mean": None * pq.pA}
-    backend_ = dtc.backend
+    #backend_ = dtc.backend
     rtest = RheobaseTest(observation=place_holder, name="RheobaseTest")
     rtest.score_type = RelativeDifferenceScore
     assert len(dtc.attrs)
@@ -221,6 +222,33 @@ def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Dat
         dtc.rheobase = None
     return dtc
 """
+def eval_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
+    '''
+    --Synpopsis: This approach should be redundant, but for
+    some reason this method works when others fail.
+    --args:
+        :param object dtc:
+        :param object Rheobase Test Class:
+    :-- returns: object dtc: with rheobase solution stored as an updated
+        dtc object attribute
+    -- Synopsis: This is used to recover/produce
+     a rheobase test class instance,
+     given unknown experimental observations.
+    '''
+    assert len(dtc.attrs)
+    model = dtc.dtc_to_model()
+    rtest.params["injected_square_current"] = {}
+    rtest.params["injected_square_current"]["delay"] = DELAY
+    rtest.params["injected_square_current"]["duration"] = DURATION
+    dtc.rheobase = rtest.generate_prediction(model)["value"]
+    if bind_vm:
+        temp_vm = model.get_membrane_potential()
+        dtc.vmrh = temp_vm
+    if np.isnan(np.min(temp_vm)):
+        # rheobase exists but the waveform is nuts.
+        # this is the fastest way to filter out a gene
+        dtc.rheobase = None
+    return dtc
 
 def get_new_rtest(dtc: DataTC) -> RheobaseTest:
     place_holder = {"mean": 10 * pq.pA}
@@ -271,7 +299,7 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
             dtc.rheobase = None
         if bind_vm:
             dtc.vmrh = temp_vm
-    if rtest is not None:
+    if rtest is None:
     	raise Exception('rheobase test is still None despite efforts')
             # rheobase does exist but lets filter out this bad gene.
     return dtc
