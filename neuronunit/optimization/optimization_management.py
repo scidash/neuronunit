@@ -257,6 +257,8 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
             dtc.rheobase = None
         if bind_vm:
             dtc.vmrh = temp_vm
+    if rtest is not None:
+    	raise Exception('rheobase test is still None despite efforts')
             # rheobase does exist but lets filter out this bad gene.
     return dtc
     #else:
@@ -793,7 +795,10 @@ def efel_evaluation(
 
         instance_obj.efel = None
         instance_obj.efel = results[0]
-        assert hasattr(instance_obj, "efel")
+        try:
+            assert hasattr(instance_obj, "efel")
+        except:
+            raise Exception('efel object has no efel results list attribute')
     return instance_obj
 
 def generic_nu_tests_to_bpo_protocols(multi_spiking=None):
