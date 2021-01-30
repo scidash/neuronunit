@@ -8,10 +8,6 @@ if SILENT:
     warnings.filterwarnings("ignore")
 
 
-try:
-    import efel
-except:
-    warnings.warn("Blue brain feature extraction not available, consider installing")
 
 # import time
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
@@ -35,9 +31,12 @@ import copy
 from frozendict import frozendict
 from itertools import repeat
 import random
+
+
 import quantities as pq
 pq.quantity.PREFERRED = [pq.mV, pq.pA, pq.MOhm, pq.ms, pq.pF, pq.Hz / pq.pA]
 
+import efel
 import bluepyopt as bpop
 import bluepyopt.ephys as ephys
 from bluepyopt.parameters import Parameter
@@ -78,9 +77,7 @@ class TSD(dict):
     Contains a method called optimize.
     """
 
-    def __init__(self, tests={}, use_rheobase_score=True):
-        self.DO = None
-        self.use_rheobase_score = use_rheobase_score
+    def __init__(self, tests={}):
         self.backend = None
         if type(tests) is TestSuite:
             tests = OrderedDict({t.name: t for t in tests.tests})
@@ -109,14 +106,21 @@ class TSD(dict):
         # somewhere in job lib there are tools for pickling more complex objects
         # including simulation results.
         """
-        del self.ga_out.DO
-        del self.DO
         return {k: v for k, v in self.items()}
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def random_p(model_type):
+def random_p(model_type:str="")->dict:
+    """
+    -- Synopsis: generate random parameter sets.
+    This is used to create varied and unpredictible
+    simulated ephysiological data, which is used to test
+    robustness of optimization algorithms.
+
+    --params: string specifying model type.
+    --output: a dictionary of parameters.
+    """
     ranges = MODEL_PARAMS[model_type]
     date_int = int(time.time())
     numpy.random.seed(date_int)
@@ -129,30 +133,39 @@ def random_p(model_type):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def process_rparam(backend, free_parameters):
-    random_param = random_p(backend)
+def process_rparam(model_type:str="", free_parameters:dict=None)-> Union[DataTC, dict]:
+    """
+    -- Synopsis: generate random parameter sets.
+    This is used to create varied and unpredictible
+    simulated ephysiological data, which is used to test
+    robustness of optimization algorithms.
+
+    --params: string specifying model type.
+    --output: a DataTC semi-model type instantiated
+     with the random model parameters.
+    """
+    random_param = random_p(model_type)
     random_param.pop("Iext", None)
-    rp = random_param
     if free_parameters is not None:
         reduced_parameter_set = {}
         for k in free_parameters:
             reduced_parameter_set[k] = rp[k]
-        rp = reduced_parameter_set
+        random_param = reduced_parameter_set
     dsolution = DataTC(backend=backend, attrs=rp)
     temp_model = dsolution.dtc_to_model()
     dsolution.attrs = temp_model.default_attrs
     dsolution.attrs.update(rp)
-    return dsolution, rp, None, random_param
+    return dsolution, random_param
 
 
-def write_models_for_nml_db(dtc):
+def write_models_for_nml_db(dtc: DataTC):
     with open(str(list(dtc.attrs.values())) + ".csv", "w") as writeFile:
         df = pd.DataFrame([dtc.attrs])
         writer = csv.writer(writeFile)
         writer.writerows(df)
 
 
-def write_opt_to_nml(path, param_dict) -> None:
+def write_opt_to_nml(path: str, param_dict:dict):
     """
     -- Inputs: desired file path, model parameters to encode in NeuroML2
     -- Outputs: NeuroML2 file.
@@ -178,6 +191,7 @@ def write_opt_to_nml(path, param_dict) -> None:
     return
 
 """
+Depricated
 def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
     '''
     --args:
@@ -313,13 +327,13 @@ def multi_spiking_feature_extraction(
     via EFEL because its fast
     """
     if solve_for_current is None:
-        _, _, _, _, dtc = inject_model_soma(dtc)
+        dtc = inject_model_soma(dtc)
         if dtc.vm_soma is None:# or dtc.exclude is True:
             return dtc
         dtc = efel_evaluation(dtc, efel_filter_iterable)
         dtc.vm_soma = None
     else:
-        _, _, _, _, dtc = inject_model_soma(dtc,
+        dtc = inject_model_soma(dtc,
                             solve_for_current=solve_for_current)
 
         if dtc.vm_soma is None:# or dtc.exclude is True:
@@ -456,11 +470,11 @@ def make_evaluator(
     """
     --Synopsis: make a BluePyOpt genetic algorithm evaluator
     ie an object that has a model attribute,
-    and an score calculator method.
+    and a fitness calculation method.
     Using these attributes the evaluator
     can update parameters on the model,
     and then can calculate appropriate objective
-    scores. The genetic algorithm can thus use this
+    fitness/scores. The genetic algorithm can thus use this
     object to evolve genes, but also the human user of the
     GA can use the evaluator to find the fitness of any
     particular model parameterization.
@@ -468,15 +482,15 @@ def make_evaluator(
 
     if type(nu_tests) is type(dict()):
         nu_tests = list(nu_tests.values())
-    if model == "IZHI":
+    if model_type == "IZHI":
         simple_cell = model_classes.IzhiModel()
-    if model == "MAT":
+    if model_type == "MAT":
         simple_cell = model_classes.MATModel()
-    if model == "ADEXP":
+    if model_type == "ADEXP":
         simple_cell = model_classes.ADEXPModel()
-    simple_cell.params = PARAMS[model]
+    simple_cell.params = PARAMS[model_type]
     simple_cell.NU = True
-    simple_cell.name = model + experiment
+    simple_cell.name = model_type + experiment
     objectives = []
     for tt in nu_tests:
         feature_name = tt.name
@@ -486,7 +500,6 @@ def make_evaluator(
         objectives.append(objective)
 
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
-
     sweep_protocols = []
     protocol = ephys.protocols.NeuronUnitAllenStepProtocol("onestep", [None], [None])
     sweep_protocols.append(protocol)
@@ -495,13 +508,12 @@ def make_evaluator(
     )
     cell_evaluator = ephys.evaluators.CellEvaluator(
         cell_model=simple_cell,
-        param_names=list(copy.copy(BPO_PARAMS)[model].keys()),
+        param_names=list(copy.copy(BPO_PARAMS)[model_type].keys()),
         fitness_protocols={onestep_protocol.name: onestep_protocol},
         fitness_calculator=score_calc,
         sim="euler",
     )
-
-    simple_cell.params_by_names(copy.copy(BPO_PARAMS)[model].keys())
+    simple_cell.params_by_names(copy.copy(BPO_PARAMS)[model_type].keys())
     return (cell_evaluator, simple_cell, score_calc, [tt.name for tt in nu_tests])
 
 
@@ -517,10 +529,11 @@ def get_binary_file_downloader_html(bin_file_path, file_label="File"):
     href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{os.path.basename(bin_file_path)}">Download {file_label}</a>'
     return href
 
-def rescale(v):
+def rescale(v:pq):
     '''
-    --Synopsis: default rescaling units are often not desirable.
-    this method helps circumnavigate defaults.
+    --Synopsis: default rescaling quantities SI units are often not desirable.
+    this method helps circumnavigates quantities defaults, instead
+    the method tries to apply neuroscience relevant units as a first preference.
     A constant "rescale preffered was defined as a CONSTANT at the top of this file"
     --params: v is a qauntities type object (often a float multiplied by a si unit)
     --returns rescaled units
@@ -549,7 +562,7 @@ def _opt_(
     if type(constraints) is not type(list()):
         constraints = list(constraints.values())
     cell_evaluator, simple_cell, score_calc, test_names = make_evaluator(
-        constraints, PARAMS, test_key, model=model_value, score_type=score_type
+        constraints, PARAMS, test_key, model_type=model_value, score_type=score_type
     )
     model_type = str("_best_fit_") + str(model_value) + "_" + str(test_key) + "_.p"
     mut = 0.125
@@ -656,16 +669,18 @@ def inject_model_soma(
     solve_for_current=None,
     fixed: bool = False,
     final_run=False,
-) -> Union[AnalogSignal, AnalogSignal, dict, Any, DataTC]:
+) -> DataTC:
     from neuronunit.tests.target_spike_current import SpikeCountSearch
 
     """
-    -- args: dtc: containing spike number attribute,
-    the number of spikes wanted.
+    -- Synpopsis: this method changes the DataTC object (side effects)
+    -- args: dtc: containing spike number attribute.
+    the spike number attribute signifies the number of spikes wanted.
     if solve_for_current is True find the current that causes the
-    wanted spike number.
-    -- outputs: voltage at 3.0 rheobase,
-                voltage that causes a desired number of spikes,
+    wanted spike number. If solve_for_current is False
+    find vm at various multiples or rheobase.
+
+    -- outputs: voltage that causes a desired number of spikes,
                 current Injection Parameters,
                 dtc
     -- Synopsis:
@@ -710,9 +725,7 @@ def inject_model_soma(
         # Refactor somewhere else, this simulation takes time.
         # the rmp calculation somewhere else.
         ##
-        '''
-        '''
-        return None, vm_soma, uc, None, dtc
+        return dtc
 
 def still_more_features(instance_obj: Any,results:List,vm_used:AnalogSignal,target_vm:None) -> Any:
     """
@@ -759,22 +772,27 @@ def efel_evaluation(
     """
     -- Synopsis: evaluate efel feature extraction criteria against on
     reduced cell models and probably efel data.
-    -- Args: multiple dispatch:
+    -- Args: efel_filter_iterable an Iterable that can be a list or a dictionary.
+        If it is a dictionary, then the keys are the features that efel should extract,
+        and the values are the SI units that belong to that feature (often units are None).
         This method works on both sciunit runnable models
         and DataTC objects.
         efel_filter_iterable: is the list of efel features to extract
         it can be a list or a dictionary, if it is a list, the keys should be feature units
         current is the value of current amplitude to evaluate the model features at.
     """
-    if isinstance(efel_filter_iterable, type(dict())):
-        efel_filter_list = list(efel_filter_iterable.keys())
     if isinstance(efel_filter_iterable, type(list())):
         efel_filter_list = efel_filter_iterable
-    if "extra_tests" in efel_filter_iterable.keys():
-        if "var_expl" in efel_filter_iterable["extra_tests"].keys():
-            target_vm = efel_filter_iterable["extra_tests"]["var_expl"]
+    if isinstance(efel_filter_iterable, type(dict())):
+        efel_filter_list = list(efel_filter_iterable.keys())
+        if "extra_tests" in efel_filter_iterable.keys():
+            if "var_expl" in efel_filter_iterable["extra_tests"].keys():
+                target_vm = efel_filter_iterable["extra_tests"]["var_expl"]
+        else:
+            target_vm = None
     else:
         target_vm = None
+
     vm_used = instance_obj.vm_soma
     try:
         efel.reset()
