@@ -191,7 +191,7 @@ class RheobaseTest(VmTest):
                             # treat this as zero spikes because a slightly higher
                             # spike will give a cleaner rheobase waveform.
                         #    n_spikes = 0
-                if n_spikes == self.target_num_spikes:
+                if n_spikes == self.target_number_spikes:
 
                     self.n_spikes = n_spikes
                 if self.verbose >= 2:
