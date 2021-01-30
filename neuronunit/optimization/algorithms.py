@@ -77,10 +77,10 @@ def _record_stats(stats, logbook, gen, population, invalid_count):
 	'''Update the statistics with the new population'''
 	record = stats.compile(population) if stats is not None else {}
 	logbook.record(gen=gen, nevals=invalid_count, **record)
-
+from deap import tools
 def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb,gen, ngen):
 	'''return the offspring, use toolbox.variate if possible'''
-	from deap import tools
+
 
 	BOUND_LOW = []
 	BOUND_UP = []
@@ -97,22 +97,50 @@ def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb,gen, ngen)
 	return deap.algorithms.varAnd(parents, toolbox, cxpb, (1-(gen/ngen))/4.0)
 
 def _get_offspring(parents, toolbox, cxpb, mutpb):
-	'''return the offspring, use toolbox.variate if possible'''
+    """return the offspring, use toolbox.variate if possible"""
 
-	if hasattr(toolbox, 'variate'):
-		return toolbox.variate(parents, toolbox, cxpb, mutpb)
-	return deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
+    if hasattr(toolbox, "variate"):
+        return toolbox.variate(parents, toolbox, cxpb, mutpb)
+    return deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
 
 
 def _check_stopping_criteria(criteria, params):
-	for c in criteria:
-		c.check(params)
-		if c.criteria_met:
-			logger.info('Run stopped because of stopping criteria: ' +
-						c.name)
-			return True
-	else:
-		return False
+    for c in criteria:
+        c.check(params)
+        if c.criteria_met:
+            logger.info("Run stopped because of stopping criteria: " + c.name)
+            return True
+    else:
+        return False
+
+def filter_parents(parents):
+    #Remove the genes that represent the cliff
+    #edge. Possibly counter productive.
+    import copy
+    parentsc = copy.copy(parents)
+    orig_len = len(parents)
+    cnt = 0
+    for p in parentsc:
+        flag=False
+        for fv in p.fitness.values:
+            if fv == 1000.0:
+                flag=True
+        if flag:
+            cnt += 1
+    while cnt > 0:
+        for i, p in enumerate(parentsc):
+            flag=False
+            for fv in p.fitness.values:
+                if fv == 1000.0:
+                    flag=True
+            if flag:
+                del parentsc[i]
+                cnt -= 1
+    cnt=0
+    while len(parentsc) < orig_len:
+        parentsc.append(parentsc[cnt])
+        cnt+=1
+    return parentsc
 
 
 def eaAlphaMuPlusLambdaCheckpoint(
@@ -129,33 +157,33 @@ def eaAlphaMuPlusLambdaCheckpoint(
 		continue_cp=False):
 	r"""This is the :math:`(~\alpha,\mu~,~\lambda)` evolutionary algorithm
 
-	Args:
-		population(list of deap Individuals)
-		toolbox(deap Toolbox)
-		mu(int): Total parent population size of EA
-		cxpb(float): Crossover probability
-		mutpb(float): Mutation probability
-		ngen(int): Total number of generation to run
-		stats(deap.tools.Statistics): generation of statistics
-		halloffame(deap.tools.HallOfFame): hall of fame
-		cp_frequency(int): generations between checkpoints
-		cp_filename(string): path to checkpoint filename
-		continue_cp(bool): whether to continue
-	"""
+    Args:
+            population(list of deap Individuals)
+            toolbox(deap Toolbox)
+            mu(int): Total parent population size of EA
+            cxpb(float): Crossover probability
+            mutpb(float): Mutation probability
+            ngen(int): Total number of generation to run
+            stats(deap.tools.Statistics): generation of statistics
+            halloffame(deap.tools.HallOfFame): hall of fame
+            cp_frequency(int): generations between checkpoints
+            cp_filename(string): path to checkpoint filename
+            continue_cp(bool): whether to continue
+    """
 
-	if cp_filename:
-		cp_filename_tmp = cp_filename + '.tmp'
+    if cp_filename:
+        cp_filename_tmp = cp_filename + ".tmp"
 
-	if continue_cp:
-		# A file name has been given, then load the data from the file
-		cp = pickle.load(open(cp_filename, "rb"))
-		population = cp["population"]
-		parents = cp["parents"]
-		start_gen = cp["generation"]
-		halloffame = cp["halloffame"]
-		logbook = cp["logbook"]
-		history = cp["history"]
-		random.setstate(cp["rndstate"])
+    if continue_cp:
+        # A file name has been given, then load the data from the file
+        cp = pickle.load(open(cp_filename, "rb"))
+        population = cp["population"]
+        parents = cp["parents"]
+        start_gen = cp["generation"]
+        halloffame = cp["halloffame"]
+        logbook = cp["logbook"]
+        history = cp["history"]
+        random.setstate(cp["rndstate"])
 
 		# Assert that the fitness of the individuals match the evaluator
 		obj_size = len(population[0].fitness.wvalues)
@@ -195,7 +223,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
 		population.append(halloffame[0])
 		#flo = np.sum(copy.copy(halloffame[0].fitness.values))
 		#stopping_params.update({'hof':flo})
-		#stop = _check_stopping_criteria(stopping_criteria, stopping_params)
+		stop = _check_stopping_criteria(stopping_criteria, stopping_params)
 
 		invalid_count = _evaluate_invalid_fitness(toolbox, offspring)
 		_update_history_and_hof(halloffame, history, population)

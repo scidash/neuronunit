@@ -162,6 +162,7 @@ class RheobaseTest(VmTest):
 
                     model.inject_square_current(uc)
                     n_spikes = model._backend.get_spike_count()
+                    assert n_spikes == model.get_spike_count()
 
                 current = self.get_injected_square_current()
 
@@ -173,24 +174,26 @@ class RheobaseTest(VmTest):
                         model._backend.inject_square_current(**current)
 
                     n_spikes = model.get_spike_count()
+                    assert n_spikes == model.get_spike_count()
+
                 else:
 
                     model._backend.inject_square_current(**current)
                     n_spikes = model._backend.get_spike_count()
 
-                if n_spikes == self.target_num_spikes:
-                    if self.target_num_spikes == 1:
+                    #if self.target_num_spikes == 1:
                         # ie this is rheobase search
-                        vm = model.get_membrane_potential()
-                        if vm[-1]>0 and n_spikes==1:
+                        #vm = model.get_membrane_potential()
+                        #if vm[-1]>0 and n_spikes==1:
                             # this means current was not strong enough
                             # to evoke an early spike.
                             # the current did not come down again.
                             # treat this as zero spikes because a slightly higher
                             # spike will give a cleaner rheobase waveform.
-                            n_spikes = 0
+                        #    n_spikes = 0
+                if n_spikes == self.target_num_spikes:
 
-                self.n_spikes = n_spikes
+                    self.n_spikes = n_spikes
                 if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))

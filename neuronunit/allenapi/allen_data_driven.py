@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
 import pickle
 import seaborn as sns
 import os
-#import matplotlib.pyplot as plt
 import copy
 import numpy as np
 from collections.abc import Iterable
@@ -33,6 +32,7 @@ from neuronunit.tests import (
     TimeConstantTest,
     FITest
 )
+
 
 def opt_setup(
     specimen_id,
@@ -196,8 +196,13 @@ class NUFeatureAllenMultiSpike(object):
             delta = np.abs(
                 features[self.test.name] - np.mean(self.test.observation["mean"])
             )
+            delta += delta
+            delta += delta
+
             if np.nan == delta or delta == np.inf:
                 delta = 1000.0
+            #print(self.test.name,'delta',delta)
+
             return delta
         else:
             if features[feature_name] is None:
@@ -206,16 +211,17 @@ class NUFeatureAllenMultiSpike(object):
             prediction = {"value": np.mean(features[self.test.name])}
             score_gene = self.test.judge(responses["model"], prediction=prediction)
             if score_gene is not None:
-                if score_gene.log_norm_score is not None:
-                    delta = np.abs(float(score_gene.log_norm_score))
+                if score_gene.raw is not None:
+                    delta = np.abs(float(score_gene.raw))
                 else:
                     delta = 1000.0
             else:
                 delta = 1000.0
-            if np.nan == delta or delta == np.inf:
-                delta = np.abs(float(score_gene.raw))
+            #if np.nan == delta or delta == np.inf:
+            #    delta = np.abs(float(score_gene.raw))
             if np.nan == delta or delta == np.inf:
                 delta = 1000.0
+            #print(self.test.name,'delta',delta)
 
             return delta
 
@@ -286,7 +292,7 @@ def multi_layered(MU, NGEN, mapping_funct, cell_evaluator2):
 """
 
 
-def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.15, cxpb=0.65):# was 0.625): # was 0.6
+def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.1, cxpb=1):# was 0.625): # was 0.6
 
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
@@ -303,6 +309,7 @@ def opt_exec(MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.15, cxpb=0.65):# w
 
 def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count):
     best_ind = hall_of_fame[0]
+    cell_evaluator.evaluate_with_lists(best_ind)
     model = cell_evaluator.cell_model
     tests = cell_evaluator.suite.tests
     scores = []
@@ -319,14 +326,18 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
     opt.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
+    #for k,v in cell_evaluator.cell_model.attrs.items():
+    #    print(opt.attrs[k],'opt attrs',v,'in cell evaluator')
+        #assert opt.attrs[k] == v
+    print(best_ind,'the gene')
     target = copy.copy(opt)
     if "vm_soma" in suite.traces.keys():
         target.vm_soma = suite.traces["vm_soma"]
-    else:  # backwards compatibility
-        target.vm_soma = suite.traces["vm15"]
+    # else:  # backwards compatibility
+    #    target.vm_soma = suite.traces["vm15"]
     opt.seeded_current = target_current["value"]
     opt.spk_count = spk_count
-    opt = opt.attrs_to_params()
+    #opt = opt.attrs_to_params()
 
     target.seeded_current = target_current["value"]
     target.spk_count = spk_count

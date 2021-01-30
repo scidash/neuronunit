@@ -71,6 +71,7 @@ class DataTC(object):
 
     def to_bpo_param(self, attrs: dict = {}) -> dict:
         from bluepyopt.parameters import Parameter
+
         lop = {}
         for k, v in attrs.items():
             p = Parameter(name=k, bounds=v, frozen=False)
@@ -79,17 +80,15 @@ class DataTC(object):
         return lop
 
     def attrs_to_params(self):
-        self.params = self.attrs
-        for k, v in self.params.items():
+        params = self.attrs
+        for k, v in params.items():
             if np.round(v, 2) != 0:
-                self.params[k] = np.round(v, 2)
-            if k=='celltype':
-                self.params[k] = int(np.round(v, 0))
-
-        return self
-
+                params[k] = np.round(v, 2)
+            if k == "celltype":
+                params[k] = int(np.round(v, 0))
+        return params
+        
     def make_pretty(self, tests) -> pd.DataFrame:
-        import pandas as pd
 
         self.tests = tests
         self.obs_preds = pd.DataFrame(columns=["observations", "predictions"])
@@ -103,7 +102,6 @@ class DataTC(object):
         holding_preds = {
             t.name: t.prediction[k]
             for t, k in zip(self.tests, grab_keys)
-            if not hasattr(t, "allen")
         }
         ##
         # This step only partially undoes quantities annoyances.
@@ -127,7 +125,7 @@ class DataTC(object):
 
         for k, v in holding_preds.items():
             if k in holding_obs.keys() and k in holding_preds:
-                #units1 = holding_preds[k].units  # v.units)
+                # units1 = holding_preds[k].units  # v.units)
 
                 units1 = holding_preds[k].rescale_preferred().units  # v.units)
 
@@ -183,7 +181,7 @@ class DataTC(object):
         if self.constants is not None:
             self.attrs.update(self.constants)
         return  # self.attrs
-
+    '''
     def format_test(self):
         from neuronunit.optimisation.optimization_management import (
             switch_logic,
@@ -230,7 +228,7 @@ class DataTC(object):
             keyed = v.params["injected_square_current"]
             v.params["t_max"] = keyed["delay"] + keyed["duration"] + 200.0 * pq.ms
         return self.tests
-
+    '''
     def dtc_to_model(self):
         if (
             str("MAT") in self.backend
@@ -252,7 +250,9 @@ class DataTC(object):
                 model = model_classes.ADEXPModel()
 
             model.set_attrs(self.attrs)
-            self.params = model.params = self.to_bpo_param(self.attrs)
+            assert model.attrs == self.attrs
+            assert model._backend.attrs == self.attrs
+            #self.params = model.params = self.to_bpo_param(self.attrs)
             assert len(self.attrs)
             assert len(model.attrs)
             return model

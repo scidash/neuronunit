@@ -121,9 +121,11 @@ class SpikeCountSearch(VmTest):
                 uc = {'amplitude':ampl*pq.pA,'duration':DURATION,'delay':DELAY}
 
                 if str("JIT_") in model.backend:
-                    _ = model._backend.inject_square_current(**uc)
-                    n_spikes = model._backend.get_spike_count()
-
+                    _ = model.inject_square_current(**uc)
+                    n_spikes = model.get_spike_count()
+                    #_ = model._backend.inject_square_current(**uc)
+                    #n_spikes_b = model._backend.get_spike_count()
+                    #assert n_spikes == n_spikes_b
                 if float(ampl) < -10.0:
                     dtc.rheobase = {}
                     dtc.rheobase['value'] = None
@@ -144,7 +146,6 @@ class SpikeCountSearch(VmTest):
                     return dtc
 
                 dtc.lookup[float(ampl)] = n_spikes
-                #print(dtc.lookup)
             return dtc
 
         def init_dtc(dtc):
@@ -167,7 +168,11 @@ class SpikeCountSearch(VmTest):
                     dtc.initiated = True # logically unnecessary but included for readibility
             if dtc.initiated == False:
                 dtc.boolean = False
+                #steps = np.linspace(-12,67,int(8))
+                ###
+                # These values are important for who knows what reason
                 steps = np.linspace(-10,65,int(7))
+                ###
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
                 dtc.initiated = True
@@ -184,13 +189,11 @@ class SpikeCountSearch(VmTest):
             # If its not true enter a search, with ranges informed by memory
             cnt = 0
             sub = np.array([0,0]); supra = np.array([0,0])
-            '''
-            if dtc.backend is 'GLIF':
-            else:
-                big = 50
-            '''
-            big = 100
-
+            ##
+            #
+            ## Important number
+            #big = 100
+            big = 250
             while dtc.boolean == False and cnt< big:
 
                 # negeative spiker
@@ -225,20 +228,18 @@ class SpikeCountSearch(VmTest):
                 sub, supra = get_sub_supra(dtc.lookup)
                 if len(supra) and len(sub):
                     delta = float(supra.min()) - float(sub.max())
-                    if str("GLIF") in dtc.backend:
-                        tolerance = 0.0
-                    else:
-                        tolerance = 0.0
+                    #tolerance = 0.0
 
                 if self.verbose >= 2:
                     print('not rheobase alg')
-                    #print("Try %d: SubMax = %s; SupraMin = %s" % \
-                    #(cnt, sub.max() if len(sub) else None,
-                    #supra.min() if len(supra) else None))
+                    print("Try %d: SubMax = %s; SupraMin = %s" % \
+                    (cnt, sub.max() if len(sub) else None,
+                    supra.min() if len(supra) else None))
                 cnt += 1
                 reversed = {v:k for k,v in dtc.lookup.items() }
-                #target_current = reversed[self.observation['value']]
-                #dtc.target_current = target_current
+            if cnt==big:
+                if self.verbose >= 2:
+                    print('counted out and thus wrong spike count')
             return dtc
 
         dtc = DataTC()
@@ -249,15 +250,7 @@ class SpikeCountSearch(VmTest):
         # this is not a perservering assignment, of value,
         # but rather a multi statement assertion that will be checked.
         dtc.backend = model.backend
-        #print(dtc,dtc.backend)
-
-
         dtc = init_dtc(dtc)
-
-        #if hasattr(model,'orig_lems_file_path'):
-        #    dtc.model_path = model.orig_lems_file_path
-        #    assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
-
         prediction = {}
         temp = find_target_current(self,dtc).rheobase
 
@@ -438,7 +431,7 @@ class SpikeCountRangeSearch(VmTest):
             #if dtc.backend is 'GLIF':
             #    big = 100
             #else:
-            big = 55
+            big = 255
 
             while dtc.boolean == False and cnt< big:
 
@@ -485,9 +478,9 @@ class SpikeCountRangeSearch(VmTest):
                     #if str("GLIF") in dtc.backend:
                     #    tolerance = 0.0
                     #else:
-                    tolerance = 0.0
+                    #tolerance = 0.0
                         #tolerance = tolerance
-                    if delta < tolerance or (str(supra.min()) == str(sub.max())):
+                    if (str(supra.min()) == str(sub.max())):
                         if self.verbose >= 2:
                             print(delta, 'a neuron, close to the edge! Multi spiking rheobase. # spikes: ',len(supra))
                         if len(supra)<100:
@@ -520,10 +513,6 @@ class SpikeCountRangeSearch(VmTest):
         # but rather a multi statement assertion that will be checked.
         dtc.backend = model.backend
         dtc = init_dtc(dtc)
-
-        #if hasattr(model,'orig_lems_file_path'):
-        #    dtc.model_path = model.orig_lems_file_path
-        #    assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
 
         prediction = {}
 

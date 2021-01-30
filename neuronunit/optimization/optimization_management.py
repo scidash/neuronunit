@@ -1,9 +1,10 @@
 # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
 import warnings
+
 SILENT = True
 if SILENT:
-    warnings.filterwarnings('ignore', message='H5pyDeprecationWarning')
+    warnings.filterwarnings("ignore", message="H5pyDeprecationWarning")
     warnings.filterwarnings("ignore")
 
 
@@ -12,7 +13,7 @@ try:
 except:
     warnings.warn("Blue brain feature extraction not available, consider installing")
 
-#import time
+# import time
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
 import dask
 from tqdm import tqdm
@@ -35,6 +36,7 @@ from frozendict import frozendict
 from itertools import repeat
 import random
 import quantities as pq
+pq.quantity.PREFERRED = [pq.mV, pq.pA, pq.MOhm, pq.ms, pq.pF, pq.Hz / pq.pA]
 
 import bluepyopt as bpop
 import bluepyopt.ephys as ephys
@@ -45,6 +47,7 @@ from sciunit import TestSuite
 from sciunit import scores
 from sciunit.scores import RelativeDifferenceScore
 from sciunit.utils import config_set
+
 config_set("PREVALIDATE", False)
 
 from jithub.models import model_classes
@@ -280,7 +283,7 @@ def basic_expVar(trace1, trace2):
     var_trace1 = np.var(trace1)
     var_trace2 = np.var(trace2)
     var_trace1_minus_trace2 = np.var(trace1 - trace2)
-
+    # Traces are the same in variance
     if var_trace1_minus_trace2 == 0.0:
         return 1.0
     else:
@@ -307,14 +310,18 @@ def multi_spiking_feature_extraction(
     """
     if solve_for_current is None:
         _, _, _, _, dtc = inject_model_soma(dtc)
-        if dtc.vm_soma is None:
+        if dtc.vm_soma is None:# or dtc.exclude is True:
             return dtc
         dtc = efel_evaluation(dtc, efel_filter_iterable)
         dtc.vm_soma = None
     else:
-        _, _, _, _, dtc = inject_model_soma(dtc, solve_for_current=solve_for_current)
-        if dtc.vm_soma is None:
+        _, _, _, _, dtc = inject_model_soma(dtc,
+                            solve_for_current=solve_for_current)
+
+        if dtc.vm_soma is None:# or dtc.exclude is True:
+            dtc.efel = None
             return dtc
+
         dtc = efel_evaluation(dtc, efel_filter_iterable)
     if hasattr(dtc, "efel"):
         if dtc.efel is not None:
@@ -417,17 +424,11 @@ class NUFeature_standard_suite(object):
         dtc = responses["dtc"]
         model = dtc.dtc_to_model()
         model.attrs = responses["params"]
-        #print(self.test.params.keys())
-        self.test.params["padding"]=self.test.params["tmax"]
         self.test = initialise_test(self.test)
         if self.test.active and responses["dtc"].rheobase is not None:
             result = exclude_non_viable_deflections(responses)
             if result != 0:
                 return result
-        #if self.test.name == "RheobaseTest":
-        #    if not hasattr(self.test,'target_number_spikes'):
-        #        self.test.target_number_spikes=1
-
         self.test.prediction = self.test.generate_prediction(model)
         if responses["rheobase"] is not None:
             if self.test.prediction is not None:
@@ -441,8 +442,8 @@ class NUFeature_standard_suite(object):
         if not isinstance(type(score_gene), type(None)):
             if not isinstance(score_gene, sciunit.scores.InsufficientDataScore):
                 try:
-                    if not isinstance(type(score_gene.log_norm_score), type(None)):
-                        lns = np.abs(np.float(score_gene.log_norm_score))
+                    if not isinstance(type(score_gene.raw), type(None)):
+                        lns = np.abs(np.float(score_gene.raw))
                     else:
                         if not isinstance(type(score_gene.raw), type(None)):
                             # works 1/2 time that log_norm_score does not work
@@ -520,6 +521,12 @@ def get_binary_file_downloader_html(bin_file_path, file_label="File"):
     href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{os.path.basename(bin_file_path)}">Download {file_label}</a>'
     return href
 
+def rescale(v):
+    v.rescale_preferred()
+    v = v.simplified
+    if np.round(v, 2) != 0:
+        v = np.round(v, 2)
+    return v
 
 def _opt_(
     constraints,
@@ -542,8 +549,8 @@ def _opt_(
         constraints, PARAMS, test_key, model=model_value, score_type=score_type
     )
     model_type = str("_best_fit_") + str(model_value) + "_" + str(test_key) + "_.p"
-    mut = 0.05
-    cxp = 0.4
+    mut = 0.125
+    cxp = 0.6125
     optimization = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
         offspring_size=MU,
@@ -551,8 +558,7 @@ def _opt_(
         selector_name=diversity,
         mutpb=mut,
         cxpb=cxp,
-        NEURONUNIT=True,
-        ELITISM=True,
+        neuronunit=True
     )
 
     final_pop, hall_of_fame, logs, hist = optimization.run(max_ngen=NGEN)
@@ -564,20 +570,28 @@ def _opt_(
     tests = constraints
     obs_preds = []
     scores = []
+
     for t in tests:
         scores.append(t.judge(model, prediction=t.prediction))
         if "mean" in t.observation.keys():
+            t.observation["mean"] = rescale(t.observation["mean"])
+
             if "mean" in t.prediction.keys():
+                t.prediction["mean"] = rescale(t.prediction["mean"])
+
                 obs_preds.append(
                     (t.name, t.observation["mean"], t.prediction["mean"], scores[-1])
                 )
             if "value" in t.prediction.keys():
+                t.prediction["value"] = rescale(t.prediction["value"])
+
                 obs_preds.append(
                     (t.name, t.observation["mean"], t.prediction["value"], scores[-1])
                 )
         else:
             obs_preds.append((t.name, t.observation, t.prediction, scores[-1]))
 
+    df = pd.DataFrame(obs_preds)
 
     model.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
@@ -586,10 +600,10 @@ def _opt_(
     opt.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
-    try:
-        df = opt.make_pretty(tests=tests)
-    except:
-        df = pd.DataFrame(obs_preds)
+    #try:
+    #    df = opt.make_pretty(tests=tests)
+    #except:
+    #    df = pd.DataFrame(obs_preds)
 
     best_fit_val = best_ind.fitness.values
     return (
@@ -627,13 +641,14 @@ def public_opt(
     )
     return opt, obs_preds, df
 
-
+ALLEN_DELAY = 1000.0 * pq.ms
+ALLEN_DURATION = 2000.0 * pq.ms
 def inject_model_soma(
     dtc: DataTC,
     figname=None,
     solve_for_current=None,
     fixed: bool = False,
-    final_run = False,
+    final_run=False,
 ) -> Union[AnalogSignal, AnalogSignal, dict, Any, DataTC]:
     from neuronunit.tests.target_spike_current import SpikeCountSearch
 
@@ -651,7 +666,7 @@ def inject_model_soma(
     if type(solve_for_current) is not type(None):
         observation_range = {}
         model = dtc.dtc_to_model()
-        temp = model.attrs
+        model._backend.attrs = dtc.attrs
 
         if not fixed:
             observation_range["value"] = dtc.spk_count
@@ -660,29 +675,65 @@ def inject_model_soma(
             if type(target_current) is not type(None):
                 solve_for_current = target_current["value"]
             dtc.solve_for_current = solve_for_current
-            ALLEN_DELAY = 1000.0 * pq.ms
-            ALLEN_DURATION = 2000.0 * pq.ms
-            if final_run:
-                padding = 342.85* pq.ms
-            else:
-                padding = 0.0* pq.ms
 
         uc = {
             "amplitude": solve_for_current,
             "duration": ALLEN_DURATION,
             "delay": ALLEN_DELAY,
-            "padding":padding
+            "padding":342.85* pq.ms
         }
-        model = dtc.dtc_to_model()
-        model._backend.attrs = temp
+        #model = dtc.dtc_to_model()
+        #temp = model.attrs
         model.inject_square_current(**uc)
-        if hasattr(dtc, "spikes"):
-            dtc.spikes = model._backend.spikes
-        vm15 = model.get_membrane_potential()
-        dtc.vm_soma = vm15
+        n_spikes = model.get_spike_count()
+        if n_spikes != dtc.spk_count:
+            dtc.exclude = True
+        else:
+            dtc.exclude = False
+        #if hasattr(dtc, "spikes"):
+        #    spikes = model._backend.spikes
+        #assert model._backend.spikes == n_spikes
+        #dtc.spikes = n_spikes
+        vm_soma = model.get_membrane_potential()
+        dtc.vm_soma = vm_soma
+        ##
+        # Refactor somewhere else, this simulation takes time.
+        # the rmp calculation somewhere else.
+        ##
+        '''
+        uc['amplitude'] = 0*pq.pA
+        model.inject_square_current(**uc)
+        vr = model.get_membrane_potential()
+        vmr = np.mean(vr)
+        dtc.vmr = None
+        dtc.vmr = vmr
         del model
-        return None, vm15, uc, None, dtc
+        '''
+        return None, vm_soma, uc, None, dtc
 
+#from sciunit.models import RunnableModel
+ALLEN_DURATION = 2000 * pq.ms
+ALLEN_DELAY = 1000 * pq.ms
+
+def extra_features(instance_obj: Any,results:List,vm_used:AnalogSignal,target_vm:AnalogSignal) -> Any:
+    #if hasattr(instance_obj, "spikes"):
+    #    results[0]["vr_"] = instance_obj.vmr
+    if target_vm is not None:
+        results[0]["var_expl"] = basic_expVar(vm_used,target_vm)
+    else:
+        results[0]["var_expl"] = basic_expVar(target_vm,target_vm)
+    if hasattr(instance_obj, "spikes"):
+        spikes = instance_obj.spikes
+
+    else:
+        spikes = threshold_detection(vm_used)
+        #if vm_used[-1]>0:
+        #    spikes_ = spikes[0:-2]
+        #    spikes = spikes_
+            #del spikes[-1]
+    for index, tc in enumerate(spikes):
+        results[0]["spike_" + str(index)] = float(tc)
+    return instance_obj,results
 
 def efel_evaluation(
     instance_obj: Any, efel_filter_iterable: Iterable = None, current: float = None
@@ -690,11 +741,21 @@ def efel_evaluation(
     """
     -- Synopsis: evaluate efel feature extraction criteria against on
     reduced cell models and probably efel data.
+    -- Args: multiple dispatch:
+        This method works on both sciunit runnable models
+        and DataTC objects.
+        efel_filter_iterable: is the list of efel features to extract
+        it can be a list or a dictionary, if it is a list, the keys should be feature units
+        current is the value of current amplitude to evaluate the model features at.
     """
     if isinstance(efel_filter_iterable, type(dict())):
         efel_filter_list = list(efel_filter_iterable.keys())
     if isinstance(efel_filter_iterable, type(list())):
         efel_filter_list = efel_filter_iterable
+    if "var_expl" in efel_filter_iterable.keys():
+        target_vm = efel_filter_iterable["var_expl"]
+    else:
+        target_vm = None
     vm_used = instance_obj.vm_soma
     try:
         efel.reset()
@@ -709,8 +770,6 @@ def efel_evaluation(
         "V": [float(v) for v in vm_used.magnitude],
         "stimulus_current": [current],
     }
-    ALLEN_DURATION = 2000 * pq.ms
-    ALLEN_DELAY = 1000 * pq.ms
     trace3["stim_end"] = [float(ALLEN_DELAY) + float(ALLEN_DURATION)]
     trace3["stim_start"] = [float(ALLEN_DELAY)]
 
@@ -748,17 +807,13 @@ def efel_evaluation(
             [trace3], efel_filter_list, raise_warnings=False
         )
 
-        if hasattr(instance_obj, "spikes"):
-            spikes = instance_obj._backend.spikes
-        else:
-            spikes = threshold_detection(vm_used)
-        for index, tc in enumerate(spikes):
-            results[0]["spike_" + str(index)] = float(tc)
-        instance_obj.efel = None
-        instance_obj.efel = results[0]
         efel.reset()
         #instance_obj = apply_units_to_efel(instance_obj,
         #                                    efel_filter_iterable)
+        instance_obj,results = extra_features(instance_obj,results,vm_used,target_vm=target_vm)
+
+        instance_obj.efel = None
+        instance_obj.efel = results[0]
         assert hasattr(instance_obj, "efel")
     return instance_obj
 
@@ -766,13 +821,14 @@ def generic_nu_tests_to_bpo_protocols(multi_spiking=None):
     pass
 
 
-def apply_units_to_efel(instance_obj,efel_filter_iterable):
-    if isinstance(efel_filter_iterable,type(dict())):
-        for k,v in instance_obj.efel.items():
+def apply_units_to_efel(instance_obj, efel_filter_iterable):
+    if isinstance(efel_filter_iterable, type(dict())):
+        for k, v in instance_obj.efel.items():
             units = efel_filter_iterable[k]
             if units is not None and v is not None:
-                instance_obj.efel[k] = v*units
+                instance_obj.efel[k] = v * units
     return instance_obj
+
 
 def inject_and_plot_model(
     dtc: DataTC, figname=None, plotly=True, verbose=False
@@ -798,6 +854,7 @@ def inject_and_plot_model(
         return [None, None, None]
     if not plotly:
         import matplotlib.pyplot as plt
+
         plt.clf()
         plt.figure()
         if dtc.backend in str("HH"):
@@ -897,6 +954,16 @@ def neutral_values(keyed: dict = {}) -> dict:
 
 
 def initialise_test(v: Any, rheobase: Any = None) -> dict:
+    '''
+    -- Synpopsis:
+    Create appropriate square wave stimulus for various
+    Different square pulse current injection protocols.
+    ###
+    # TODO move this to BPO/ephys/protocols.py
+    # unify it with BPO protocol code.
+    # It is already a bit similar.
+    ###
+    '''
     if not isinstance(v, Iterable):
         v = [v]
     v = switch_logic(v)
