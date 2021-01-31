@@ -286,7 +286,7 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
         target.vm_soma = suite.traces["vm15"]
     opt.seeded_current = target_current["value"]
     opt.spk_count = spk_count
-    opt = opt.attrs_to_params()
+    params = opt.attrs_to_params()
 
     target.seeded_current = target_current["value"]
     target.spk_count = spk_count
@@ -298,14 +298,14 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
     return opt, target, scores, obs_preds, df
 
 
-
+''' Not used
 def downsample(array, npts):
     interpolated = interp1d(
         np.arange(len(array)), array, axis=0, fill_value="extrapolate"
     )
     downsampled = interpolated(np.linspace(0, len(array), npts))
     return downsampled
-
+'''
 
 def make_stim_waves_func():
     import allensdk.core.json_utilities as json_utilities

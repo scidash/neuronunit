@@ -711,6 +711,7 @@ def public_opt(
 
 ALLEN_DELAY = 1000.0 * pq.ms
 ALLEN_DURATION = 2000.0 * pq.ms
+from neuronunit.tests.target_spike_current import SpikeCountSearch
 
 
 def inject_model_soma(
@@ -720,7 +721,6 @@ def inject_model_soma(
     fixed: bool = False,
     final_run=False,
 ) -> DataTC:
-    from neuronunit.tests.target_spike_current import SpikeCountSearch
 
     """
     -- Synpopsis: this method changes the DataTC object (side effects)
