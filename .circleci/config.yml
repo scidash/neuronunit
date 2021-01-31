@@ -54,6 +54,6 @@ jobs:
       - run: git clone -b dev https://github.com/russelljjarvis/sciunit.git
 
       - run: cd sciunit; pip install -e .; cd ..;
-      #- run: pip install git+https://github.com/russelljjarvis/eFEL
+      - run: pip install git+https://github.com/russelljjarvis/eFEL
       - run: cd neuronunit/unit_test; python rheobase_dtc_test.py
       - run: cd neuronunit/unit_test; python -m unittest scores_unit_test.py
