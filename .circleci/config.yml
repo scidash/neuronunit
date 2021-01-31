@@ -42,7 +42,7 @@ jobs:
       - run: pip install sklearn
       - run: pip install seaborn
       - run: pip install frozendict
-      - run: pip install plotly
+      #- run: pip install plotly
       - run: pip install allensdk==0.16.3
       - run: pip install --upgrade colorama
       - run: pip install -e .
@@ -54,8 +54,6 @@ jobs:
       - run: git clone -b dev https://github.com/russelljjarvis/sciunit.git
 
       - run: cd sciunit; pip install -e .; cd ..;
-      - run: pip install git+https://github.com/russelljjarvis/eFEL
+      #- run: pip install git+https://github.com/russelljjarvis/eFEL
       - run: cd neuronunit/unit_test; python rheobase_dtc_test.py
-      - run: cd neuronunit/unit_test; python adexp_opt.py
-      - run: cd neuronunit/unit_test; python import_test.py
       - run: cd neuronunit/unit_test; python -m unittest scores_unit_test.py

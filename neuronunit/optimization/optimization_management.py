@@ -979,6 +979,9 @@ def inject_and_plot_model(
 
 
 def switch_logic(xtests: Any = None) -> List:
+    """
+    Logic to apply current injection stimulation protocols
+    """
     try:
         atsd = TSD()
     except:
