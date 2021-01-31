@@ -194,7 +194,7 @@ def write_opt_to_nml(path: str, param_dict: dict):
 
 
 
-#Depricated
+#Should be Depricated, but is not.
 def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
     '''
     --Synpopsis: This approach should be redundant, but for
@@ -216,8 +216,8 @@ def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Dat
     rtest.params["injected_square_current"] = {}
     rtest.params["injected_square_current"]["delay"] = DELAY
     rtest.params["injected_square_current"]["duration"] = DURATION
-    return rtest
-"""
+    #return rtest
+
     dtc.rheobase = rtest.generate_prediction(model)["value"]
     if bind_vm:
         temp_vm = model.get_membrane_potential()
@@ -227,7 +227,7 @@ def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Dat
         # this is the fastest way to filter out a gene
         dtc.rheobase = None
     return dtc
-"""
+
 
 
 def eval_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
@@ -310,8 +310,9 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
             dtc.vmrh = temp_vm
     if rtest is None or dtc.rheobase is None:
         if dtc.rheobase is None:
-            dtc = get_rh(dtc)
-            dtc = eval_rh(dtc)
+            dtc = get_rh(dtc,rtest)
+            #dtc = get_rh(dtc,rtest)
+            #dtc = eval_rh(dtc,rtest)
         if rtest is None:
             raise Exception("rheobase test is still None despite efforts")
         # rheobase does exist but lets filter out this bad gene.
