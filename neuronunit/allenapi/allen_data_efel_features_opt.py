@@ -90,11 +90,8 @@ def opt_setup(
 
     attrs = {k: np.mean(v) for k, v in MODEL_PARAMS[model_type].items()}
     dtc = DataTC(backend=model_type, attrs=attrs)
-    for t in nu_tests:
-        if t.name == "Spikecount":
-            spk_count = float(t.observation["mean"])
-            break
-
+    spktest = [ t for t in nu_tests if t.name == "Spikecount"][0]
+    spk_count = float(spktest.observation["mean"])
     template_model.backend = model_type
     template_model.allen = True
     template_model.NU = True
@@ -293,10 +290,10 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
 
     target.seeded_current = target_current["value"]
     target.spk_count = spk_count
-    _, _, _, _, target = inject_model_soma(
+    target = inject_model_soma(
         target, solve_for_current=target_current["value"]
     )
-    _, _, _, _, opt = inject_model_soma(opt, solve_for_current=target_current["value"])
+    opt = inject_model_soma(opt, solve_for_current=target_current["value"])
 
     return opt, target, scores, obs_preds, df
 
