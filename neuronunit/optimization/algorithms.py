@@ -31,7 +31,7 @@ import deap.algorithms
 import deap.tools
 import pickle
 from tqdm.auto import tqdm
-from .stoppingCriteria import MaxNGen
+from bluepyopt.deapext.stoppingCriteria import MaxNGen
 import streamlit as st
 
 logger = logging.getLogger("__main__")
