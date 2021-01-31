@@ -34,13 +34,14 @@ class testOptimization(unittest.TestCase):
         if cellmodel == "ADEXP":
             model = model_classes.ADEXPModel()
 
-        dtc = DataTC()
-        dtc.backend = cellmodel
-        dtc._backend = model._backend
-        dtc.attrs = model.attrs
+        dtc = DataTC(backend=cellmodel)
+        assert dtc.backend == cellmodel
+        #dtc._backend = model._backend
+        #dtc.attrs = model.attrs
         dtc.params = {k: np.mean(v) for k, v in MODEL_PARAMS[cellmodel].items()}
         other_params = BPO_PARAMS[cellmodel]
         dtc = dtc_to_rheo(dtc)
+        print(dtc.rheobase)
         assert dtc.rheobase is not None
         self.assertIsNotNone(dtc.rheobase)
         vm, plt, dtc = inject_and_plot_model(dtc, plotly=False)

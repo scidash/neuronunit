@@ -193,7 +193,7 @@ def write_opt_to_nml(path: str, param_dict: dict):
     return
 
 
-"""
+
 #Depricated
 def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
     '''
@@ -216,6 +216,8 @@ def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Dat
     rtest.params["injected_square_current"] = {}
     rtest.params["injected_square_current"]["delay"] = DELAY
     rtest.params["injected_square_current"]["duration"] = DURATION
+    return rtest
+"""
     dtc.rheobase = rtest.generate_prediction(model)["value"]
     if bind_vm:
         temp_vm = model.get_membrane_potential()
@@ -306,8 +308,12 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
             dtc.rheobase = None
         if bind_vm:
             dtc.vmrh = temp_vm
-    if rtest is None:
-        raise Exception("rheobase test is still None despite efforts")
+    if rtest is None or dtc.rheobase is None:
+        if dtc.rheobase is None:
+            dtc = get_rh(dtc)
+            dtc = eval_rh(dtc)
+        if rtest is None:
+            raise Exception("rheobase test is still None despite efforts")
         # rheobase does exist but lets filter out this bad gene.
     return dtc
     # else:
