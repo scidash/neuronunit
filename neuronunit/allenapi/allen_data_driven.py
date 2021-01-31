@@ -277,9 +277,8 @@ def opt_setup_two(
 
 
 def opt_exec(
-    MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.1, cxpb=1, neuronunit=False
-):  # was 0.625): # was 0.6
-
+    MU, NGEN, mapping_funct, cell_evaluator, mutpb=0.1, cxpb=1, neuronunit=True
+):
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
         offspring_size=MU,
