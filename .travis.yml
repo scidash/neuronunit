@@ -25,7 +25,6 @@ install:
   - pip install seaborn
   - pip install coveralls
   - pip install pylmeasure # required by morphology tests
-  - pip install unittest
   - sh build.sh
 
 ######################################################
