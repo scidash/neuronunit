@@ -294,6 +294,16 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
             rtest = get_rtest(dtc)
     else:
         rtest = get_rtest(dtc)
+    if rtest is None:#
+        # If neuronunit models are run without first
+        # defining neuronunit tests, we run only
+        # generate_prediction/extract_features methods.
+        # but still need to construct tests somehow
+        # test construction requires an observation.
+        #if dtc.rheobase is None:
+        #dtc = get_rh(dtc,rtest)
+        dtc = get_rh(dtc,rtest)
+        dtc = eval_rh(dtc,rtest)
 
     if rtest is not None:
         model = dtc.dtc_to_model()
@@ -308,11 +318,6 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
             dtc.rheobase = None
         if bind_vm:
             dtc.vmrh = temp_vm
-    if rtest is None or dtc.rheobase is None:
-        if dtc.rheobase is None:
-            dtc = get_rh(dtc,rtest)
-            #dtc = get_rh(dtc,rtest)
-            #dtc = eval_rh(dtc,rtest)
         if rtest is None:
             raise Exception("rheobase test is still None despite efforts")
         # rheobase does exist but lets filter out this bad gene.
