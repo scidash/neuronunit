@@ -184,19 +184,19 @@ class RheobaseTest(VmTest):
                 current = self.get_injected_square_current()
 
                 current["amplitude"] = ampl * pq.pA
-                if "JIT_" in model.backend:
-                    try:
-                        model.inject_square_current(**current)
-                    except:
-                        model._backend.inject_square_current(**current)
+                if "JIT_" in str(model.backend):
+                    #try:
+                    model.inject_square_current(**current)
+                    #except:
+                    #model._backend.inject_square_current(**current)
 
                     n_spikes = model.get_spike_count()
                     assert n_spikes == model.get_spike_count()
 
                 else:
 
-                    model._backend.inject_square_current(**current)
-                    n_spikes = model._backend.get_spike_count()
+                    model.inject_square_current(**current)
+                    n_spikes = model.get_spike_count()
 
                     # if self.target_num_spikes == 1:
                     # ie this is rheobase search
@@ -215,7 +215,7 @@ class RheobaseTest(VmTest):
                 lookup[float(ampl)] = n_spikes
                 spike_counts = np.array([n for x, n in lookup.items() if n > 0])
                 if n_spikes and n_spikes <= spike_counts.min():
-                    self.rheobase_vm = model._backend.get_membrane_potential()
+                    self.rheobase_vm = model.get_membrane_potential()
 
         max_iters = 40
 

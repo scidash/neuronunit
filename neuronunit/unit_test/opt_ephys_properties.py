@@ -74,6 +74,8 @@ class testOptimizationEphysCase(unittest.TestCase):
         )
 
     def test_allen_fi_curve_opt(self):
+        self.a_cells["fi_curve"]["FITest"].observation['sem'] = self.a_cells["fi_curve"]["FITest"].observation['mean']
+        self.a_cells["fi_curve"]["FITest"].observation['std'] = self.a_cells["fi_curve"]["FITest"].observation['mean']
         [
             final_pop,
             hall_of_fame,

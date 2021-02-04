@@ -462,16 +462,21 @@ class NUFeature_standard_suite(object):
         self.score_array = None
 
     def calculate_score(self, responses: dict = {}) -> float:
-        dtc = responses["dtc"]
-        model = dtc.dtc_to_model()
+        model = responses["dtc"]
+        #model = dtc.dtc_to_model()
         model.attrs = responses["params"]
         self.test = initialise_test(self.test)
         if self.test.active and responses["dtc"].rheobase is not None:
             result = exclude_non_viable_deflections(responses)
             if result != 0:
                 return result
+        if str("RheobaseTest") in self.test.name:
+            self.test.target_number_spikes = None
+            self.test.target_number_spikes = 1
+
         self.test.prediction = self.test.generate_prediction(model)
         if responses["rheobase"] is not None:
+
             if self.test.prediction is not None:
                 score_gene = self.test.judge(
                     model, prediction=self.test.prediction, deep_error=True
@@ -659,7 +664,7 @@ def _opt_(
     model.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
-    opt = model.model_to_dtc()
+    opt = model#.model_to_dtc()
     opt.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
@@ -741,7 +746,7 @@ def inject_model_soma(
     if type(solve_for_current) is not type(None):
         observation_range = {}
         model = dtc.dtc_to_model()
-        model._backend.attrs = dtc.attrs
+        #model._backend.attrs = dtc.attrs
 
         if not fixed:
             observation_range["value"] = dtc.spk_count
@@ -814,10 +819,10 @@ def spike_time_errors(
     """
     -- Synopsis: Generate simple errors simply based on spike times.
     """
-    if hasattr(instance_obj, "spikes"):
-        spikes = instance_obj.spikes
-    else:
-        spikes = threshold_detection(vm_used)
+    #if hasattr(instance_obj, "spikes"):
+    #    spikes = instance_obj.spikes
+    #else:
+    spikes = threshold_detection(vm_used)
     for index, tc in enumerate(spikes):
         results[0]["spike_" + str(index)] = float(tc)
     return instance_obj, results
@@ -942,11 +947,11 @@ def inject_and_plot_model(
     dtc = dtc_to_rheo(dtc)
     model = dtc.dtc_to_model()
     uc = {"amplitude": dtc.rheobase, "duration": DURATION, "delay": DELAY}
-    if dtc.jithub or "NEURON" in str(dtc.backend):
-        vm = model._backend.inject_square_current(**uc)
-    else:
-        vm = model.inject_square_current(uc)
-    vm = model.get_membrane_potential()
+    #if dtc.jithub or "NEURON" in str(dtc.backend):
+    #    vm = model._backend.inject_square_current(**uc)
+    #else:
+    vm = model.inject_square_current(**uc)
+    #vm = model.get_membrane_potential()
     if verbose:
         if vm is not None:
             print(vm[-1], vm[-1] < 0 * pq.mV)
@@ -957,7 +962,7 @@ def inject_and_plot_model(
 
         plt.clf()
         plt.figure()
-        if dtc.backend in str("HH"):
+        if str(dtc.backend) in str("HH"):
             plt.title("Conductance based model membrane potential plot")
         else:
             plt.title("Membrane potential plot")

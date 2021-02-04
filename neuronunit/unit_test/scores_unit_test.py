@@ -52,12 +52,10 @@ class testOptimizationAllenMultiSpike(unittest.TestCase):
             471819401,
         ]
         self.specimen_id = self.ids[1]
-
     def optimize_job(self, model_type, score_type=ZScore):
         find_sweep_with_n_spikes = 8
-        dtc = DataTC()
-        dtc.backend = model_type
-        model = dtc.dtc_to_model()
+        from jithub.models.model_classes import ADEXPModel
+        model = ADEXPModel()
         model.params = BPO_PARAMS[model_type]
         fixed_current = 122 * qt.pA
         if model_type == "ADEXP":

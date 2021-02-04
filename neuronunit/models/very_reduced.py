@@ -26,6 +26,7 @@ class VeryReducedModel(mod.ExternalModel,
         super(VeryReducedModel, self).__init__(name=name,
                                                backend=backend,
                                                attrs=attrs)
+        print('gets here \n\n\n\n')
         self.run_number = 0
         self.tstop = None
 
@@ -50,6 +51,6 @@ class VeryReducedModel(mod.ExternalModel,
         spike_train = sf.get_spike_train(vm)
         return spike_train
 
-    def inject_square_current(self, current):
-        self.set_run_params(injected_square_current=current)
-        self._backend.inject_square_current(current)
+    #def inject_square_current(self, current):
+    #    self.set_run_params(injected_square_current=current)
+    #    self._backend.inject_square_current(current)

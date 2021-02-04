@@ -1,17 +1,14 @@
 import numpy as np
 import quantities as qt
-qt.quantity.PREFERRED = [qt.mV, qt.pA, qt.MOhm, qt.ms, qt.pF, qt.Hz / qt.pA]
-
 import copy
 from collections import OrderedDict
 from sciunit import scores
 from sciunit.scores.collections import ScoreArray
 import sciunit
 import pandas as pd
-from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
-#from jithub.models.model_classes import BPOModel
 from jithub.models import model_classes
-from bluepyopt.parameters import Parameter
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
+
 
 class DataTC(object):
     """
@@ -40,56 +37,41 @@ class DataTC(object):
                 self.attrs = {
                     k: np.mean(v) for k, v in MODEL_PARAMS[self.backend_ref].items()
                 }
+                self = DataTC(backend=self.backend, attrs=self.attrs)
+                model = self.dtc_to_model()
+                self.attrs = model._backend.default_attrs
+                del model
             else:
-                self.attrs = self._backend.default_attrs
-            #print(self.attrs)
+                model = self.dtc_to_model()
+                self.attrs = model._backend.default_attrs
+                del model
             return None
 
     def __init__(self, attrs=None, backend=None, _backend=None):
         self.rheobase = None
+        self.attrs = attrs
         self.initiated = False
         self.backend = backend
-        #self._backend = _backend
+        self._backend = _backend
         self.lookup = {}
-        self.name = "NeuronUnitModel"
-        #super(BPOModel,self).__init__(name=self.name)
-        self.attrs = attrs
-        """
         if self.backend is not None:
             if (
-                str("MAT") in str(self.backend)
-                or str("IZHI") in str(self.backend)
-                or str("ADEXP") in str(self.backend)
+                str("MAT") in self.backend
+                or str("IZHI") in self.backend
+                or str("ADEXP") in self.backend
             ):
                 self.jithub = True
             else:
                 self.jithub = False
-        """
         if attrs is None:
             self.attrs = None
             self.model_default()
         else:
             self.attrs = attrs
-        #self.set_attrs(self.attrs)
-        """
-        if hasattr(self,'jithub'):
-            if self.jithub:
-                if str("MAT") in str(self.backend):
-                    self = model_classes.MATModel()
-                if str("IZHI") in self.backend:
-                    model = model_classes.IzhiModel()
-                if str("ADEXP") in self.backend:
-                    model = model_classes.ADEXPModel(name=self.name)
-
-                model.set_attrs(self.attrs)
-                assert model.attrs == self.attrs
-                assert model._backend.attrs == self.attrs
-                #self.params = model.params = self.to_bpo_param(self.attrs)
-                assert len(self.attrs)
-        """
-        #assert len(model.attrs)
 
     def to_bpo_param(self, attrs: dict = {}) -> dict:
+        from bluepyopt.parameters import Parameter
+
         lop = {}
         for k, v in attrs.items():
             p = Parameter(name=k, bounds=v, frozen=False)
@@ -105,8 +87,8 @@ class DataTC(object):
             if k == "celltype":
                 params[k] = int(np.round(v, 0))
         return params
-
-    def make_pretty(self, tests:List) -> pd.DataFrame:
+        
+    def make_pretty(self, tests) -> pd.DataFrame:
 
         self.tests = tests
         self.obs_preds = pd.DataFrame(columns=["observations", "predictions"])
@@ -124,6 +106,7 @@ class DataTC(object):
         ##
         # This step only partially undoes quantities annoyances.
         ##
+        qt.quantity.PREFERRED = [qt.mV, qt.pA, qt.MOhm, qt.ms, qt.pF, qt.Hz / qt.pA]
 
         for k, v in holding_preds.items():
             if k in holding_obs.keys() and k in holding_preds:
@@ -175,11 +158,76 @@ class DataTC(object):
         self.obs_preds = self.obs_preds.T
         return self.obs_preds
 
+    """
+    def dtc_to_opt_man(self):
+        from neuronunit.optimization.optimization_management import OptMan
+        from collections import OrderedDict
+        from neuronunit.optimization.model_parameters import MODEL_PARAMS
+
+        OM = OptMan(self.tests, self.backend)
+        OM.boundary_dict = MODEL_PARAMS[self.backend]
+        OM.backend = self.backend
+        OM.td = list(OrderedDict(OM.boundary_dict).keys())
+        return OM
+
+    def get_agreement(self):
+        self = self.self_evaluate()
+        OM = self.dtc_to_opt_man()
+        self = OM.get_agreement(self)
+        return self
+    """
 
     def add_constant(self):
         if self.constants is not None:
             self.attrs.update(self.constants)
         return  # self.attrs
+    '''
+    def format_test(self):
+        from neuronunit.optimisation.optimization_management import (
+            switch_logic,
+            active_values,
+            passive_values,
+        )
+
+        # pre format the current injection dictionary based on pre computed
+        # rheobase values of current injection.
+        # This is much like the hooked method from the old get neab file.
+        self.protocols = {}
+        if not hasattr(self, "tests"):
+            self.tests = copy.copy(self.tests)
+        if hasattr(self.tests, "keys"):  # is type(dict):
+            tests = [key for key in self.tests.values()]
+            self.tests = switch_logic(tests)  # ,self.tests.use_rheobase_score)
+        else:
+            self.tests = switch_logic(self.tests)
+
+        for v in self.tests:
+            k = v.name
+            self.protocols[k] = {}
+            if hasattr(v, "passive"):
+                if v.passive == False and v.active == True:
+                    keyed = self.protocols[k]  # .params
+                    self.protocols[k] = active_values(keyed, self.rheobase)
+
+                    if str("APThresholdTest") in v.name and not self.threshold:
+                        model = self.dtc_to_model()
+                        model.attrs = model._backend.default_attrs
+                        treshold = v.generate_prediction(model)
+                        self.threshold = treshold
+
+                    if str("APThresholdTest") in v.name:
+                        v.threshold = None
+                        v.threshold = self.threshold
+                elif v.passive == True and v.active == False:
+                    keyed = self.protocols[k]  # .params
+                    self.protocols[k] = passive_values(keyed)
+
+            if v.name in str("RestingPotentialTest"):
+                self.protocols[k]["injected_square_current"] = {}
+                self.protocols[k]["injected_square_current"]["amplitude"] = 0.0 * qt.pA
+            keyed = v.params["injected_square_current"]
+            v.params["t_max"] = keyed["delay"] + keyed["duration"] + 200.0 * pq.ms
+        return self.tests
     '''
     def dtc_to_model(self):
         if (
@@ -204,6 +252,7 @@ class DataTC(object):
             model.set_attrs(self.attrs)
             assert model.attrs == self.attrs
             assert model._backend.attrs == self.attrs
+            #self.params = model.params = self.to_bpo_param(self.attrs)
             assert len(self.attrs)
             assert len(model.attrs)
             return model
@@ -217,17 +266,6 @@ class DataTC(object):
             if model.attrs is None:
                 model.attrs = self.attrs
             return model
-    '''
-
-    def dtc_to_model(self):
-        #print(dir(self))
-        #print(self.attrs)
-        if self.attrs is None:
-            self.model_default()
-            #self.attrs = self.default_attrs
-        assert self.attrs is not None
-        #self.attrs = self._backend.attrs
-        return self
 
     def dtc_to_sciunit_model(self):
         model = self.dtc_to_model()
