@@ -2,11 +2,11 @@
 
 from .base import *
 
-class SciUnitTestCase(NotebookTools, 
-                            unittest.TestCase):
+
+class SciUnitTestCase(NotebookTools, unittest.TestCase):
     """Testing documentation notebooks"""
 
-    path = '.'
+    path = "."
 
     def test_serialization(self):
-        self.do_notebook('serialization_test')
+        self.do_notebook("serialization_test")

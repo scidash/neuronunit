@@ -5,11 +5,12 @@ import numpy as np
 import pickle
 import quantities as pq
 import sciunit
+from sciunit.models import RunnableModel
 import sciunit.capabilities as scap
 from sciunit.models import RunnableModel
 
 
-class StaticModel(sciunit.Model,
+class StaticModel(RunnableModel,
                   cap.ReceivesSquareCurrent,
                   cap.ProducesActionPotentials,
                   cap.ProducesMembranePotential):
@@ -29,7 +30,7 @@ class StaticModel(sciunit.Model,
             raise TypeError('vm must be a neo.core.AnalogSignal')
 
         self.vm = vm
-        
+        self.backend = 'static_model'    
     def run(self, **kwargs):
         pass
 
@@ -58,6 +59,7 @@ class ExternalModel(sciunit.models.RunnableModel,
         """Create an instace of a model that produces a static waveform."""
         super(ExternalModel, self).__init__(*args, **kwargs)
 
+
     def set_membrane_potential(self, vm):
         self.vm = vm
 
@@ -66,6 +68,11 @@ class ExternalModel(sciunit.models.RunnableModel,
 
     def get_membrane_potential(self):
         return self.vm
+    def get_APs(self, **run_params):
+        """Return the APs, if any, contained in the static waveform."""
+        vm = self.get_membrane_potential(**run_params)
+        waveforms = sf.get_spike_waveforms(vm)
+        return waveforms
 
     
 class RandomVmModel(RunnableModel, cap.ProducesMembranePotential, cap.ReceivesCurrent):
