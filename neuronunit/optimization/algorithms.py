@@ -247,10 +247,10 @@ def eaAlphaMuPlusLambdaCheckpoint(
     old = 0
     deltas = []
     while not (_check_stopping_criteria(stopping_criteria, stopping_params)):
-        #offspring0 = _get_offspring(parents, toolbox, cxpb, mutpb)
-        offspring1 = _get_offspring_time_diminishing_eta(
-            parents, toolbox, cxpb, mutpb, gen, ngen
-        )
+        offspring1 = _get_offspring(parents, toolbox, cxpb, mutpb)
+        #offspring1 = _get_offspring_time_diminishing_eta(
+        #    parents, toolbox, cxpb, mutpb, gen, ngen
+        #)
         population = parents + offspring1 + [halloffame[0]]
 
         stop = _check_stopping_criteria(stopping_criteria, stopping_params)
