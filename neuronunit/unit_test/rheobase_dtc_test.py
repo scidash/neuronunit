@@ -14,7 +14,7 @@ from neuronunit.optimization.optimization_management import (
     model_to_rheo,
     inject_and_plot_model
 )
-from neuronunit.optimization.data_transport_container import DataTC
+#from neuronunit.optimization.data_transport_container import DataTC
 from jithub.models import model_classes
 import matplotlib.pyplot as plt
 import quantities as qt

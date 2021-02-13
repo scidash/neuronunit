@@ -280,8 +280,7 @@ def get_rtest(model: RunnableModel) -> RheobaseTest:
         else:
             rtest = get_new_rtest(model)
     return rtest
-"""
-def model_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
+def dtc_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
     #--Synopsis: If  test taking data, and objects are present (observations etc).
     #Take the rheobase test and store it in the data transport container.
     if hasattr(model, "tests"):
@@ -314,7 +313,7 @@ def model_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
             raise Exception("rheobase test is still None despite efforts")
         # rheobase does exist but lets filter out this bad gene.
     return model
-"""
+
 def model_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
     """
     --Synopsis: If  test taking data, and objects are present (observations etc).
