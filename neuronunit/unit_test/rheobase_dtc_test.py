@@ -11,7 +11,7 @@ from neuronunit.optimization.model_parameters import (
     to_bpo_param
 )
 from neuronunit.optimization.optimization_management import (
-    dtc_to_rheo,
+    model_to_rheo,
     inject_and_plot_model
 )
 from neuronunit.optimization.data_transport_container import DataTC
@@ -37,13 +37,8 @@ class testOptimization(unittest.TestCase):
             from jithub.models.model_classes import ADEXPModel
             cellmodel = ADEXPModel()
 
-        #    model = model_classes.ADEXPModel()
-
-        #dtc = DataTC(backend=cellmodel)
-        #assert dtc.backend == cellmodel
         cellmodel.params = {k: np.mean(v) for k, v in MODEL_PARAMS[model_type].items()}
-        #other_params = BPO_PARAMS[cellmodel]
-        cellmodel = dtc_to_rheo(cellmodel)
+        cellmodel = model_to_rheo(cellmodel)
         print(cellmodel.rheobase)
         assert cellmodel.rheobase is not None
         self.assertIsNotNone(cellmodel.rheobase)

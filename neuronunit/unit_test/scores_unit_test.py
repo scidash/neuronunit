@@ -20,7 +20,7 @@ from neuronunit.optimization.model_parameters import (
     to_bpo_param,
 )
 from neuronunit.optimization.optimization_management import (
-    dtc_to_rheo,
+    model_to_rheo,
     inject_and_plot_model,
 )
 import numpy as np

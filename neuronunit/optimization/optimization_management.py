@@ -299,15 +299,10 @@ def dtc_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
         # generate_prediction/extract_features methods.
         # but still need to construct tests somehow
         # test construction requires an observation.
-        #if dtc.rheobase is None:
-        #dtc = get_rh(dtc,rtest)
         model = get_rh(model,rtest)
         model = eval_rh(model,rtest)
 
     if rtest is not None:
-        #model = dtc.dtc_to_model()
-        #if dtc.attrs is not None:
-        #    model.attrs = dtc.attrs
         if isinstance(rtest, Iterable):
             rtest = rtest[0]
         model.rheobase = rtest.generate_prediction(model)["value"]
@@ -321,14 +316,9 @@ def dtc_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
             raise Exception("rheobase test is still None despite efforts")
         # rheobase does exist but lets filter out this bad gene.
     return model
-    # else:
-    # otherwise, if no observation is available, or if rheobase test score is not desired.
-    # Just generate rheobase predictions, giving the models the freedom of rheobase
-    # discovery without test taking.
-    # dtc = get_rh(dtc, rtest, bind_vm=bind_vm)
-    # if bind_vm:
-    #    dtc.vmrh = temp_vm
-    # return dtc
+
+model_to_rheo = dtc_to_rheo
+
 
 
 def basic_expVar(trace1, trace2):
@@ -765,10 +755,6 @@ def inject_model_soma(
             model.exclude = True
         else:
             model.exclude = False
-        # if hasattr(dtc, "spikes"):
-        #    spikes = model._backend.spikes
-        # assert model._backend.spikes == n_spikes
-        # model.spikes = n_spikes
         vm_soma = model.get_membrane_potential()
         model.vm_soma = vm_soma
         ##
@@ -929,9 +915,10 @@ def apply_units_to_efel(instance_obj, efel_filter_iterable):
                 instance_obj.efel[k] = v * units
     return instance_obj
 
+#import matplotlib.pyplot as plt
 
 def inject_and_plot_model(
-    dtc: RunnableModel, figname=None, plotly=True, verbose=False
+    model: RunnableModel, figname=None, plotly=True, verbose=False
 ) -> Union[Any, Any, Any]:
     """
     -- Synopsis: produce rheobase injection value
@@ -939,25 +926,19 @@ def inject_and_plot_model(
     with known attributes
     and known rheobase current injection value.
     """
-    dtc = dtc_to_rheo(dtc)
-    model = dtc.dtc_to_model()
-    uc = {"amplitude": dtc.rheobase, "duration": DURATION, "delay": DELAY}
-    #if dtc.jithub or "NEURON" in str(dtc.backend):
-    #    vm = model._backend.inject_square_current(**uc)
-    #else:
+    model = model_to_rheo(model)
+    uc = {"amplitude": model.rheobase, "duration": DURATION, "delay": DELAY}
     vm = model.inject_square_current(**uc)
-    #vm = model.get_membrane_potential()
     if verbose:
         if vm is not None:
             print(vm[-1], vm[-1] < 0 * pq.mV)
     if vm is None:
         return [None, None, None]
     if not plotly:
-        import matplotlib.pyplot as plt
 
         plt.clf()
         plt.figure()
-        if str(dtc.backend) in str("HH"):
+        if str(model.backend) in str("HH"):
             plt.title("Conductance based model membrane potential plot")
         else:
             plt.title("Membrane potential plot")
@@ -974,8 +955,8 @@ def inject_and_plot_model(
         if figname is not None:
             fig.write_image(str(figname) + str(".png"))
         else:
-            return vm, fig, dtc
-    return [vm, plt, dtc]
+            return vm, fig, model
+    return [vm, plt, model]
 
 
 def switch_logic(xtests: Any = None) -> List:
