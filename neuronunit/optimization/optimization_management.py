@@ -46,6 +46,7 @@ from sciunit import TestSuite
 from sciunit import scores
 from sciunit.scores import RelativeDifferenceScore
 from sciunit.utils import config_set
+from sciunit.models import RunnableModel
 
 config_set("PREVALIDATE", False)
 
@@ -160,7 +161,7 @@ def process_rparam(
     return dsolution, random_param
 
 
-def write_models_for_nml_db(dtc: DataTC):
+def write_models_for_nml_db(dtc: RunnableModel):
     with open(str(list(dtc.attrs.values())) + ".csv", "w") as writeFile:
         df = pd.DataFrame([dtc.attrs])
         writer = csv.writer(writeFile)
@@ -194,8 +195,7 @@ def write_opt_to_nml(path: str, param_dict: dict):
 
 
 
-#Should be Depricated, but is not.
-def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
+def get_rh(dtc: RunnableModel, rtest_class: RheobaseTest, bind_vm: bool = False) -> RunnableModel:
     '''
     --Synpopsis: This approach should be redundant, but for
     some reason this method works when others fail.
@@ -230,7 +230,7 @@ def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Dat
 
 
 
-def eval_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
+def eval_rh(dtc: RunnableModel, rtest_class: RheobaseTest, bind_vm: bool = False) -> RunnableModel:
     """
     --Synpopsis: This approach should be redundant, but for
     some reason this method works when others fail.
@@ -259,7 +259,7 @@ def eval_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Da
     return dtc
 
 
-def get_new_rtest(dtc: DataTC) -> RheobaseTest:
+def get_new_rtest(dtc: RunnableModel) -> RheobaseTest:
     place_holder = {"mean": 10 * pq.pA}
     f = RheobaseTest
     rtest = f(observation=place_holder, name="RheobaseTest")
@@ -267,7 +267,7 @@ def get_new_rtest(dtc: DataTC) -> RheobaseTest:
     return rtest
 
 
-def get_rtest(dtc: DataTC) -> RheobaseTest:
+def get_rtest(dtc: RunnableModel) -> RheobaseTest:
     if not hasattr(dtc, "tests"):
         rtest = get_new_rtest(dtc)
     else:
@@ -281,19 +281,18 @@ def get_rtest(dtc: DataTC) -> RheobaseTest:
             rtest = get_new_rtest(dtc)
     return rtest
 
-
-def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
+def dtc_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
     """
     --Synopsis: If  test taking data, and objects are present (observations etc).
     Take the rheobase test and store it in the data transport container.
     """
-    if hasattr(dtc, "tests"):
-        if type(dtc.tests) is type({}) and str("RheobaseTest") in dtc.tests.keys():
-            rtest = dtc.tests["RheobaseTest"]
+    if hasattr(model, "tests"):
+        if type(model.tests) is type({}) and str("RheobaseTest") in model.tests.keys():
+            rtest = model.tests["RheobaseTest"]
         else:
-            rtest = get_rtest(dtc)
+            rtest = get_rtest(model)
     else:
-        rtest = get_rtest(dtc)
+        rtest = get_rtest(model)
     if rtest is None:#
         # If neuronunit models are run without first
         # defining neuronunit tests, we run only
@@ -302,8 +301,8 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
         # test construction requires an observation.
         #if dtc.rheobase is None:
         #dtc = get_rh(dtc,rtest)
-        dtc = get_rh(dtc,rtest)
-        dtc = eval_rh(dtc,rtest)
+        model = get_rh(model,rtest)
+        model = eval_rh(model,rtest)
 
     if rtest is not None:
         #model = dtc.dtc_to_model()
@@ -311,17 +310,17 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
         #    model.attrs = dtc.attrs
         if isinstance(rtest, Iterable):
             rtest = rtest[0]
-        dtc.rheobase = rtest.generate_prediction(dtc)["value"]
-        temp_vm = dtc.get_membrane_potential()
+        model.rheobase = rtest.generate_prediction(model)["value"]
+        temp_vm = model.get_membrane_potential()
         min = np.min(temp_vm)
         if np.isnan(temp_vm.any()):
-            dtc.rheobase = None
+            model.rheobase = None
         if bind_vm:
-            dtc.vmrh = temp_vm
+            model.vmrh = temp_vm
         if rtest is None:
             raise Exception("rheobase test is still None despite efforts")
         # rheobase does exist but lets filter out this bad gene.
-    return dtc
+    return model
     # else:
     # otherwise, if no observation is available, or if rheobase test score is not desired.
     # Just generate rheobase predictions, giving the models the freedom of rheobase
@@ -357,7 +356,7 @@ def basic_expVar(trace1, trace2):
         )
 
 
-def train_length(dtc: DataTC) -> DataTC:
+def train_length(dtc: RunnableModel) -> RunnableModel:
     if not hasattr(dtc, "efel"):
         dtc.efel = [{}]
     vm = dtc.vm_soma
@@ -367,8 +366,8 @@ def train_length(dtc: DataTC) -> DataTC:
 
 
 def multi_spiking_feature_extraction(
-    dtc: DataTC, solve_for_current: bool = None, efel_filter_iterable: List = None
-) -> DataTC:
+    dtc: RunnableModel, solve_for_current: bool = None, efel_filter_iterable: List = None
+) -> RunnableModel:
     """
     Perform multi spiking feature extraction
     via EFEL because its fast
@@ -720,16 +719,16 @@ from neuronunit.tests.target_spike_current import SpikeCountSearch
 
 
 def inject_model_soma(
-    dtc: DataTC,
+    model: RunnableModel,
     figname=None,
     solve_for_current=None,
     fixed: bool = False,
     final_run=False,
-) -> DataTC:
+) -> RunnableModel:
 
     """
     -- Synpopsis: this method changes the DataTC object (side effects)
-    -- args: dtc: containing spike number attribute.
+    -- args: model: containing spike number attribute.
     the spike number attribute signifies the number of spikes wanted.
     if solve_for_current is True find the current that causes the
     wanted spike number. If solve_for_current is False
@@ -737,7 +736,7 @@ def inject_model_soma(
 
     -- outputs: voltage that causes a desired number of spikes,
                 current Injection Parameters,
-                dtc
+                model
     -- Synopsis:
      produce an rheobase injection value
      produce an object of class Neuronunit runnable Model
@@ -745,16 +744,14 @@ def inject_model_soma(
     """
     if type(solve_for_current) is not type(None):
         observation_range = {}
-        model = dtc.dtc_to_model()
-        #model._backend.attrs = dtc.attrs
 
         if not fixed:
-            observation_range["value"] = dtc.spk_count
+            observation_range["value"] = model.spk_count
             scs = SpikeCountSearch(observation_range)
             target_current = scs.generate_prediction(model)
             if type(target_current) is not type(None):
                 solve_for_current = target_current["value"]
-            dtc.solve_for_current = solve_for_current
+            model.solve_for_current = solve_for_current
 
         uc = {
             "amplitude": solve_for_current,
@@ -762,25 +759,23 @@ def inject_model_soma(
             "delay": ALLEN_DELAY,
             "padding": 342.85 * pq.ms,
         }
-        # model = dtc.dtc_to_model()
-        # temp = model.attrs
         model.inject_square_current(**uc)
         n_spikes = model.get_spike_count()
-        if n_spikes != dtc.spk_count:
-            dtc.exclude = True
+        if n_spikes != model.spk_count:
+            model.exclude = True
         else:
-            dtc.exclude = False
+            model.exclude = False
         # if hasattr(dtc, "spikes"):
         #    spikes = model._backend.spikes
         # assert model._backend.spikes == n_spikes
-        # dtc.spikes = n_spikes
+        # model.spikes = n_spikes
         vm_soma = model.get_membrane_potential()
-        dtc.vm_soma = vm_soma
+        model.vm_soma = vm_soma
         ##
         # Refactor somewhere else, this simulation takes time.
         # the rmp calculation somewhere else.
         ##
-        return dtc
+        return model
 
 
 def still_more_features(
@@ -936,7 +931,7 @@ def apply_units_to_efel(instance_obj, efel_filter_iterable):
 
 
 def inject_and_plot_model(
-    dtc: DataTC, figname=None, plotly=True, verbose=False
+    dtc: RunnableModel, figname=None, plotly=True, verbose=False
 ) -> Union[Any, Any, Any]:
     """
     -- Synopsis: produce rheobase injection value
