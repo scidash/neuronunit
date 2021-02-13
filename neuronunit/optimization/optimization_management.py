@@ -306,13 +306,13 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
         dtc = eval_rh(dtc,rtest)
 
     if rtest is not None:
-        model = dtc.dtc_to_model()
-        if dtc.attrs is not None:
-            model.attrs = dtc.attrs
+        #model = dtc.dtc_to_model()
+        #if dtc.attrs is not None:
+        #    model.attrs = dtc.attrs
         if isinstance(rtest, Iterable):
             rtest = rtest[0]
-        dtc.rheobase = rtest.generate_prediction(model)["value"]
-        temp_vm = model.get_membrane_potential()
+        dtc.rheobase = rtest.generate_prediction(dtc)["value"]
+        temp_vm = dtc.get_membrane_potential()
         min = np.min(temp_vm)
         if np.isnan(temp_vm.any()):
             dtc.rheobase = None
