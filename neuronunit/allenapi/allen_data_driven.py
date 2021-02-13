@@ -72,14 +72,10 @@ def opt_setup(
     if "vm_soma" in suite.traces.keys():
         target = StaticModel(vm=suite.traces["vm_soma"])
         target.vm_soma = suite.traces["vm_soma"]
-    #else:
-    #    target = StaticModel(vm=suite.traces["vm15"])
-    #    target.vm_soma = suite.traces["vm15"]
 
     nu_tests = suite.tests
 
     attrs = {k: np.mean(v) for k, v in MODEL_PARAMS[model_type].items()}
-    #dtc = DataTC(backend=model_type, attrs=attrs)
     for t in nu_tests:
         if t.name == "Spikecount":
             spk_count = float(t.observation["mean"])
@@ -144,7 +140,6 @@ def wrap_setups(
     )
     template_model.seeded_current = target_current["value"]
     template_model.allen = True
-    #template_model.seeded_current
     template_model.NU = True
     template_model.backend = model_type
     template_model.efel_filter_iterable = efel_filter_iterable
@@ -200,13 +195,11 @@ class NUFeatureAllenMultiSpike(object):
             delta = np.abs(
                 features[self.test.name] - np.mean(self.test.observation["mean"])
             )
-            delta += delta
-            delta += delta
+            #delta += delta
+            #delta += delta
 
             if np.nan == delta or delta == np.inf:
                 delta = 1000.0
-            # print(self.test.name,'delta',delta)
-
             return delta
         else:
             if features[feature_name] is None:
@@ -215,10 +208,13 @@ class NUFeatureAllenMultiSpike(object):
             prediction = {"value": np.mean(features[self.test.name])}
             score_gene = self.test.judge(responses["model"], prediction=prediction)
             if score_gene is not None:
-                if score_gene.raw is not None:
-                    delta = np.abs(float(score_gene.raw))
+                if score_gene.log_norm_score is not None:
+                    delta = np.abs(float(score_gene.log_norm_score))
                 else:
-                    delta = 1000.0
+                    if score_gene.raw is not None:
+                        delta = np.abs(float(score_gene.raw))
+                    else:
+                        delta = 1000.0
             else:
                 delta = 1000.0
             # if np.nan == delta or delta == np.inf:

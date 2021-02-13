@@ -93,11 +93,13 @@ class VeryReducedModelTestCase(unittest.TestCase):
         from sciunit.models.backends import register_backends
 
         register_backends({"My": self.backend})
-
+    @unittest.skip(
+        "currently coded to inherit from static model"
+    )  # If(OSX,"NEURON unreliable on OSX")
     def test_very_reduced_using_lems(self):
         from neuronunit.models.reduced import VeryReducedModel
 
-        vrm = VeryReducedModel(name="test very redueced model", backend="My", attrs={})
+        vrm = VeryReducedModel("test_very_reduced_model", backend=None, attrs={})
 
         vrm.rerun = False
         vrm.run_defaults = {"param3": 3}

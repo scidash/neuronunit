@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
+from collections import defaultdict
+import numpy as np
+import matplotlib.pyplot as plt
+import pickle
+from neo.core import AnalogSignal
+import quantities as qt
+from elephant.spike_train_generation import threshold_detection
 
 from allensdk.core.cell_types_cache import CellTypesCache
 from allensdk.ephys.extract_cell_features import extract_cell_features
 from allensdk.core.nwb_data_set import NwbDataSet
 
-from collections import defaultdict
-import numpy as np
-import matplotlib.pyplot as plt
-import pickle
 
 from sciunit import TestSuite
 
@@ -17,14 +20,9 @@ from neuronunit.optimization.model_parameters import MODEL_PARAMS
 from neuronunit.optimization.optimization_management import efel_evaluation
 from neuronunit.models import StaticModel
 from neuronunit.tests.make_allen_tests import AllenTest
-
 from neuronunit.tests.target_spike_current import SpikeCountSearch
-from neuronunit.optimization.data_transport_container import DataTC
-from neo.core import AnalogSignal
-import quantities as qt
-
-
-from elephant.spike_train_generation import threshold_detection
+from elephant.statistics import isi
+from sklearn.linear_model import LinearRegression
 
 
 def allen_id_to_sweeps(specimen_id: int = -1) -> Union[defaultdict, Any, List]:
@@ -45,8 +43,6 @@ def closest(lst, K):
     return idx
 
 
-from elephant.statistics import isi
-from sklearn.linear_model import LinearRegression
 
 
 def sweeps_build_fi_tests(data_set, sweep_numbers, specimen_id):
@@ -251,10 +247,6 @@ def make_suite_known_sweep_from_static_models(
     suite.model = sm
     suite.stim = stimulus
     return suite, specimen_id
-    # suite.model = None
-    # suite.useable = None
-    # suite.useable = useable
-    # suite.stim = None
 
 
 def wrangle_tests(t):
@@ -306,9 +298,6 @@ def make_suite_from_static_models(vm_soma, vm30, rheobase, currents, vmrh, speci
     ##
     suite.traces["vm_soma"] = sm.vm_soma
     suite.model = None
-    # suite.useable = None
-
-    # suite.useable = useable
     suite.model = sm
     suite.stim = None
     suite.stim = currents
