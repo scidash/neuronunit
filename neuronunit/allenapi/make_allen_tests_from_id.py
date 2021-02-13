@@ -20,7 +20,6 @@ from neuronunit.tests.make_allen_tests import AllenTest
 
 from neuronunit.tests.target_spike_current import SpikeCountSearch
 from neuronunit.optimization.data_transport_container import DataTC
-from neuronunit.optimization.optimization_management import dtc_to_rheo
 from neo.core import AnalogSignal
 import quantities as qt
 

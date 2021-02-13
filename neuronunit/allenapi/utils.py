@@ -17,7 +17,7 @@ from sciunit.scores.collections import ScoreArray
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from neuronunit.optimization.optimization_management import (
-    dtc_to_rheo,
+    model_to_rheo,
     switch_logic,
     active_values,
 )

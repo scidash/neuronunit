@@ -93,7 +93,7 @@ class TSD(dict):
         from IPython.display import display
 
         if hasattr(self, "ga_out"):
-            return display(self.ga_out["pf"][0].dtc.obs_preds)
+            return display(self.ga_out["pf"][0].model.obs_preds)
         else:
             return None
 
@@ -155,15 +155,15 @@ def process_rparam(
             reduced_parameter_set[k] = rp[k]
         random_param = reduced_parameter_set
     dsolution = DataTC(backend=backend, attrs=rp)
-    temp_model = dsolution.dtc_to_model()
+    temp_model = dsolution.model_to_model()
     dsolution.attrs = temp_model.default_attrs
     dsolution.attrs.update(rp)
     return dsolution, random_param
 
 
-def write_models_for_nml_db(dtc: RunnableModel):
-    with open(str(list(dtc.attrs.values())) + ".csv", "w") as writeFile:
-        df = pd.DataFrame([dtc.attrs])
+def write_models_for_nml_db(model: RunnableModel):
+    with open(str(list(model.attrs.values())) + ".csv", "w") as writeFile:
+        df = pd.DataFrame([model.attrs])
         writer = csv.writer(writeFile)
         writer.writerows(df)
 
@@ -195,71 +195,71 @@ def write_opt_to_nml(path: str, param_dict: dict):
 
 
 
-def get_rh(dtc: RunnableModel, rtest_class: RheobaseTest, bind_vm: bool = False) -> RunnableModel:
+def get_rh(model: RunnableModel, rtest_class: RheobaseTest, bind_vm: bool = False) -> RunnableModel:
     '''
     --Synpopsis: This approach should be redundant, but for
     some reason this method works when others fail.
     --args:
-        :param object dtc:
+        :param object model:
         :param object Rheobase Test Class:
-    :-- returns: object dtc:
+    :-- returns: object model:
     -- Synopsis: This is used to recover/produce
      a rheobase test class instance,
      given unknown experimental observations.
     '''
     place_holder = {"mean": None * pq.pA}
-    #backend_ = dtc.backend
+    #backend_ = model.backend
     rtest = RheobaseTest(observation=place_holder, name="RheobaseTest")
     rtest.score_type = RelativeDifferenceScore
-    assert len(dtc.attrs)
-    model = dtc.dtc_to_model()
+    assert len(model.attrs)
+    model = model.model_to_model()
     rtest.params["injected_square_current"] = {}
     rtest.params["injected_square_current"]["delay"] = DELAY
     rtest.params["injected_square_current"]["duration"] = DURATION
     #return rtest
 
-    dtc.rheobase = rtest.generate_prediction(model)["value"]
+    model.rheobase = rtest.generate_prediction(model)["value"]
     if bind_vm:
         temp_vm = model.get_membrane_potential()
-        dtc.vmrh = temp_vm
+        model.vmrh = temp_vm
     if np.isnan(np.min(temp_vm)):
         # rheobase exists but the waveform is nuts.
         # this is the fastest way to filter out a gene
-        dtc.rheobase = None
-    return dtc
+        model.rheobase = None
+    return model
 
 
 
-def eval_rh(dtc: RunnableModel, rtest_class: RheobaseTest, bind_vm: bool = False) -> RunnableModel:
+def eval_rh(model: RunnableModel, rtest_class: RheobaseTest, bind_vm: bool = False) -> RunnableModel:
     """
     --Synpopsis: This approach should be redundant, but for
     some reason this method works when others fail.
     --args:
-        :param object dtc:
+        :param object model:
         :param object Rheobase Test Class:
-    :-- returns: object dtc: with rheobase solution stored as an updated
-        dtc object attribute
+    :-- returns: object model: with rheobase solution stored as an updated
+        model object attribute
     -- Synopsis: This is used to recover/produce
      a rheobase test class instance,
      given unknown experimental observations.
     """
-    assert len(dtc.attrs)
-    model = dtc.dtc_to_model()
+    assert len(model.attrs)
+    model = model.model_to_model()
     rtest.params["injected_square_current"] = {}
     rtest.params["injected_square_current"]["delay"] = DELAY
     rtest.params["injected_square_current"]["duration"] = DURATION
-    dtc.rheobase = rtest.generate_prediction(model)["value"]
+    model.rheobase = rtest.generate_prediction(model)["value"]
     if bind_vm:
         temp_vm = model.get_membrane_potential()
-        dtc.vmrh = temp_vm
+        model.vmrh = temp_vm
     if np.isnan(np.min(temp_vm)):
         # rheobase exists but the waveform is nuts.
         # this is the fastest way to filter out a gene
-        dtc.rheobase = None
-    return dtc
+        model.rheobase = None
+    return model
 
 
-def get_new_rtest(dtc: RunnableModel) -> RheobaseTest:
+def get_new_rtest(model: RunnableModel) -> RheobaseTest:
     place_holder = {"mean": 10 * pq.pA}
     f = RheobaseTest
     rtest = f(observation=place_holder, name="RheobaseTest")
@@ -267,25 +267,23 @@ def get_new_rtest(dtc: RunnableModel) -> RheobaseTest:
     return rtest
 
 
-def get_rtest(dtc: RunnableModel) -> RheobaseTest:
-    if not hasattr(dtc, "tests"):
-        rtest = get_new_rtest(dtc)
+def get_rtest(model: RunnableModel) -> RheobaseTest:
+    if not hasattr(model, "tests"):
+        rtest = get_new_rtest(model)
     else:
-        if type(dtc.tests) is type(list()):
-            rtests = [t for t in dtc.tests if "rheo" in t.name.lower()]
+        if type(model.tests) is type(list()):
+            rtests = [t for t in model.tests if "rheo" in t.name.lower()]
         else:
-            rtests = [v for k, v in dtc.tests.items() if "rheo" in str(k).lower()]
+            rtests = [v for k, v in model.tests.items() if "rheo" in str(k).lower()]
         if len(rtests):
             rtest = rtests[0]
         else:
-            rtest = get_new_rtest(dtc)
+            rtest = get_new_rtest(model)
     return rtest
-
-def dtc_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
-    """
-    --Synopsis: If  test taking data, and objects are present (observations etc).
-    Take the rheobase test and store it in the data transport container.
-    """
+"""
+def model_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
+    #--Synopsis: If  test taking data, and objects are present (observations etc).
+    #Take the rheobase test and store it in the data transport container.
     if hasattr(model, "tests"):
         if type(model.tests) is type({}) and str("RheobaseTest") in model.tests.keys():
             rtest = model.tests["RheobaseTest"]
@@ -316,7 +314,7 @@ def dtc_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
             raise Exception("rheobase test is still None despite efforts")
         # rheobase does exist but lets filter out this bad gene.
     return model
-
+"""
 def model_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
     """
     --Synopsis: If  test taking data, and objects are present (observations etc).
@@ -380,44 +378,44 @@ def basic_expVar(trace1, trace2):
         )
 
 
-def train_length(dtc: RunnableModel) -> RunnableModel:
-    if not hasattr(dtc, "efel"):
-        dtc.efel = [{}]
-    vm = dtc.vm_soma
+def train_length(model: RunnableModel) -> RunnableModel:
+    if not hasattr(model, "efel"):
+        model.efel = [{}]
+    vm = model.vm_soma
     train_len = float(len(sf.get_spike_train(vm)))
-    dtc.efel["Spikecount"] = train_len
-    return dtc
+    model.efel["Spikecount"] = train_len
+    return model
 
 
 def multi_spiking_feature_extraction(
-    dtc: RunnableModel, solve_for_current: bool = None, efel_filter_iterable: List = None
+    model: RunnableModel, solve_for_current: bool = None, efel_filter_iterable: List = None
 ) -> RunnableModel:
     """
     Perform multi spiking feature extraction
     via EFEL because its fast
     """
     if solve_for_current is None:
-        dtc = inject_model_soma(dtc)
-        if dtc.vm_soma is None:  # or dtc.exclude is True:
-            return dtc
-        dtc = efel_evaluation(dtc, efel_filter_iterable)
-        dtc.vm_soma = None
+        model = inject_model_soma(model)
+        if model.vm_soma is None:  # or model.exclude is True:
+            return model
+        model = efel_evaluation(model, efel_filter_iterable)
+        model.vm_soma = None
     else:
-        dtc = inject_model_soma(dtc, solve_for_current=solve_for_current)
+        model = inject_model_soma(model, solve_for_current=solve_for_current)
 
-        if dtc.vm_soma is None:  # or dtc.exclude is True:
-            dtc.efel = None
-            return dtc
+        if model.vm_soma is None:  # or model.exclude is True:
+            model.efel = None
+            return model
 
-        dtc = efel_evaluation(dtc, efel_filter_iterable)
-    if hasattr(dtc, "efel"):
-        if dtc.efel is not None:
-            dtc = train_length(dtc)
+        model = efel_evaluation(model, efel_filter_iterable)
+    if hasattr(model, "efel"):
+        if model.efel is not None:
+            model = train_length(model)
 
     else:
-        dtc.efel = None
+        model.efel = None
 
-    return dtc
+    return model
 
 
 def constrain_ahp(vm_used: Any = object()) -> dict:
@@ -485,11 +483,11 @@ class NUFeature_standard_suite(object):
         self.score_array = None
 
     def calculate_score(self, responses: dict = {}) -> float:
-        model = responses["dtc"]
-        #model = dtc.dtc_to_model()
+        model = responses["model"]
+        #model = model.model_to_model()
         model.attrs = responses["params"]
         self.test = initialise_test(self.test)
-        if self.test.active and responses["dtc"].rheobase is not None:
+        if self.test.active and responses["model"].rheobase is not None:
             result = exclude_non_viable_deflections(responses)
             if result != 0:
                 return result
@@ -687,7 +685,7 @@ def _opt_(
     model.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
-    opt = model#.model_to_dtc()
+    opt = model#.model_to_model()
     opt.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
@@ -806,18 +804,18 @@ def still_more_features(
     as features, so that they can be used
     as features to optimize with.
     """
-    if hasattr(instance_obj, "dtc_to_model"):
+    if hasattr(instance_obj, "model_to_model"):
         model = instance_obj
-        model = dtc.dtc_to_model()
-        model._backend.attrs = dtc.attrs
+        model = model.model_to_model()
+        model._backend.attrs = model.attrs
     else:
-        dtc = instance_obj
+        model = instance_obj
     uc["amplitude"] = 0 * pq.pA
     model.inject_square_current(**uc)
     vr = model.get_membrane_potential()
     vmr = np.mean(vr)
-    dtc.vmr = None
-    dtc.vmr = vmr
+    model.vmr = None
+    model.vmr = vmr
     del model
 
     if target_vm is not None:
