@@ -317,7 +317,41 @@ def dtc_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
         # rheobase does exist but lets filter out this bad gene.
     return model
 
-model_to_rheo = dtc_to_rheo
+def model_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
+    """
+    --Synopsis: If  test taking data, and objects are present (observations etc).
+    Take the rheobase test and store it in the data transport container.
+    """
+    if hasattr(model, "tests"):
+        if type(model.tests) is type({}) and str("RheobaseTest") in model.tests.keys():
+            rtest = model.tests["RheobaseTest"]
+        else:
+            rtest = get_rtest(model)
+    else:
+        rtest = get_rtest(model)
+    if rtest is None:#
+        # If neuronunit models are run without first
+        # defining neuronunit tests, we run only
+        # generate_prediction/extract_features methods.
+        # but still need to construct tests somehow
+        # test construction requires an observation.
+        model = get_rh(model,rtest)
+        model = eval_rh(model,rtest)
+
+    if rtest is not None:
+        if isinstance(rtest, Iterable):
+            rtest = rtest[0]
+        model.rheobase = rtest.generate_prediction(model)["value"]
+        temp_vm = model.get_membrane_potential()
+        min = np.min(temp_vm)
+        if np.isnan(temp_vm.any()):
+            model.rheobase = None
+        if bind_vm:
+            model.vmrh = temp_vm
+        if rtest is None:
+            raise Exception("rheobase test is still None despite efforts")
+        # rheobase does exist but lets filter out this bad gene.
+    return model
 
 
 
