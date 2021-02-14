@@ -1,5 +1,4 @@
 typing
-typing-extensions
 dask
 lxml==4.4.1
 elephant==0.4.1
