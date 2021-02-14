@@ -30,10 +30,10 @@ import copy
 from frozendict import frozendict
 from itertools import repeat
 import random
+import matplotlib.pyplot as plt
 
 
 import quantities as pq
-
 pq.quantity.PREFERRED = [pq.mV, pq.pA, pq.MOhm, pq.ms, pq.pF, pq.Hz / pq.pA]
 
 import efel
@@ -946,7 +946,6 @@ def apply_units_to_efel(instance_obj, efel_filter_iterable):
                 instance_obj.efel[k] = v * units
     return instance_obj
 
-#import matplotlib.pyplot as plt
 
 def inject_and_plot_model(
     model: RunnableModel, figname=None, plotly=True, verbose=False
