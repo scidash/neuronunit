@@ -143,7 +143,7 @@ def trace_explore_widget(optimal_model_params=None):
     else:
         dtc = DataTC(backend="IZHI", attrs=optimal_model_params)
     dtc.attrs["a"] = slider_value
-    dtc = dtc_to_rheo(dtc)
+    dtc = model_to_mode(dtc)
     temp_rh = dtc.rheobase
     model = dtc.dtc_to_model()
     model.attrs = model._backend.default_attrs

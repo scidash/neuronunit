@@ -247,19 +247,19 @@ def eaAlphaMuPlusLambdaCheckpoint(
     old = 0
     deltas = []
     while not (_check_stopping_criteria(stopping_criteria, stopping_params)):
-        offspring1 = _get_offspring(parents, toolbox, cxpb, mutpb)
-        #offspring1 = _get_offspring_time_diminishing_eta(
-        #    parents, toolbox, cxpb, mutpb, gen, ngen
-        #)
+        #offspring1 = _get_offspring(parents, toolbox, cxpb, mutpb)
+        offspring1 = _get_offspring_time_diminishing_eta(
+            parents, toolbox, cxpb, mutpb, gen, ngen
+        )
         population = parents + offspring1 + [halloffame[0]]
 
         stop = _check_stopping_criteria(stopping_criteria, stopping_params)
         invalid_count = _evaluate_invalid_fitness(toolbox, offspring1)
-        comp1 = np.sum([ind.fitness.values for ind in offspring1])
-        if old:
-            delta = np.abs(comp1-old)
-            deltas.append((comp1,delta))#,mutpb,cxpb,eta))
-        old = comp1
+        #comp1 = np.sum([ind.fitness.values for ind in offspring1])
+        #if old:
+        #    delta = np.abs(comp1-old)
+        #    deltas.append((comp1,delta))#,mutpb,cxpb,eta))
+        #old = comp1
         #print(deltas)
         #comp1 = np.sum([ind.fitness.values for ind in offspring1])
         #print('regular',comp1,'time diminishing')#,comp1)
@@ -269,7 +269,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         ##
         # was /4
         ##
-        parents = toolbox.select(population, int(mu / 4))
+        parents = toolbox.select(population, int(mu / 3.5))
         parents = filter_parents(parents)
 
         logger.info(logbook.stream)
