@@ -195,6 +195,8 @@ class NUFeatureAllenMultiSpike(object):
             delta = np.abs(
                 features[self.test.name] - np.mean(self.test.observation["mean"])
             )
+            delta += delta
+            delta += delta
 
             if np.nan == delta or delta == np.inf:
                 delta = 1000.0

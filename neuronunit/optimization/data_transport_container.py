@@ -9,7 +9,6 @@ from sciunit.scores.collections import ScoreArray
 import sciunit
 import pandas as pd
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, Text
-#from jithub.models.model_classes import BPOModel
 from jithub.models import model_classes
 from bluepyopt.parameters import Parameter
 
@@ -161,7 +160,7 @@ class DataTC(object):
         # like a score array but nicer reporting of test name instead of test data type.
         try:
             scores_ = []
-            model = self.dtc_to_model()
+            model = self#.dtc_to_model()
             for t in self.tests:
                 scores_.append(t.judge(model, prediction=t.prediction))
 
@@ -218,23 +217,20 @@ class DataTC(object):
                 model.attrs = self.attrs
             return model
     '''
+    '''
 
     def dtc_to_model(self):
-        #print(dir(self))
-        #print(self.attrs)
         if self.attrs is None:
             self.model_default()
-            #self.attrs = self.default_attrs
         assert self.attrs is not None
-        #self.attrs = self._backend.attrs
         return self
-
     def dtc_to_sciunit_model(self):
         model = self.dtc_to_model()
         sciunit_model = model._backend.as_sciunit_model()
         return sciunit_model
+    '''
 
-    def dtc_to_gene(self, subset_params=None):
+    def to_gene(self, subset_params=None):
         """
         These imports probably need to be contained to stop recursive imports
         """
@@ -265,7 +261,7 @@ class DataTC(object):
         return gene
 
     def judge_test(self, index=0):
-        model = self.dtc_to_model()
+        model = self#self.dtc_to_model()
         if not hasattr(self, "tests"):
             print("warning dtc object does not contain NU-tests yet")
             return dtc
@@ -366,7 +362,7 @@ class DataTC(object):
         OM = self.dtc_to_opt_man()
         self = om_.dtc_to_rheo(self)
 
-        model = self.dtc_to_model()
+        model = self#.dtc_to_model()
         pms = uset_t.params
         pms["injected_square_current"]["amplitude"] = self.rheobase
         model.inject_square_current(pms["injected_square_current"])
