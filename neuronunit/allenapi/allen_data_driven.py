@@ -282,7 +282,7 @@ def opt_exec(
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
         offspring_size=MU,
-        eta=29,  # was 35, # was 25
+        eta=35,  # was 35, # was 25
         map_function=map,
         selector_name="IBEA",
         mutpb=mutpb,

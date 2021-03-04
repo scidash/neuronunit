@@ -89,7 +89,6 @@ def opt_setup(
     nu_tests = suite.tests
 
     attrs = {k: np.mean(v) for k, v in MODEL_PARAMS[model_type].items()}
-    #dtc = DataTC(backend=model_type, attrs=attrs)
     spktest = [ t for t in nu_tests if t.name == "Spikecount"][0]
     spk_count = float(spktest.observation["mean"])
     template_model.backend = model_type

@@ -52,7 +52,7 @@ config_set("PREVALIDATE", False)
 
 from jithub.models import model_classes
 
-from neuronunit.optimization.data_transport_container import DataTC
+from neuronunit.models.optimization_model_layer import OptimizationModel
 from neuronunit.tests.base import AMPL, DELAY, DURATION
 from neuronunit.tests.target_spike_current import (
     SpikeCountSearch,
@@ -136,7 +136,7 @@ def random_p(model_type: str = "") -> dict:
 @cython.wraparound(False)
 def process_rparam(
     model_type: str = "", free_parameters: dict = None
-) -> Union[DataTC, dict]:
+) -> Union[OptimizationModel, dict]:
     """
     -- Synopsis: generate random parameter sets.
     This is used to create varied and unpredictible
@@ -144,7 +144,7 @@ def process_rparam(
     robustness of optimization algorithms.
 
     --params: string specifying model type.
-    --output: a DataTC semi-model type instantiated
+    --output: a OptimizationModel semi-model type instantiated
      with the random model parameters.
     """
     random_param = random_p(model_type)
@@ -154,7 +154,7 @@ def process_rparam(
         for k in free_parameters:
             reduced_parameter_set[k] = rp[k]
         random_param = reduced_parameter_set
-    dsolution = DataTC(backend=backend, attrs=rp)
+    dsolution = OptimizationModel(backend=backend, attrs=rp)
     temp_model = dsolution.model_to_model()
     dsolution.attrs = temp_model.default_attrs
     dsolution.attrs.update(rp)
@@ -748,7 +748,7 @@ def inject_model_soma(
 ) -> RunnableModel:
 
     """
-    -- Synpopsis: this method changes the DataTC object (side effects)
+    -- Synpopsis: this method changes the OptimizationModel object (side effects)
     -- args: model: containing spike number attribute.
     the spike number attribute signifies the number of spikes wanted.
     if solve_for_current is True find the current that causes the
@@ -850,7 +850,7 @@ def efel_evaluation(
         If it is a dictionary, then the keys are the features that efel should extract,
         and the values are the SI units that belong to that feature (often units are None).
         This method works on both sciunit runnable models
-        and DataTC objects.
+        and OptimizationModel objects.
         efel_filter_iterable: is the list of efel features to extract
         it can be a list or a dictionary, if it is a list, the keys should be feature units
         current is the value of current amplitude to evaluate the model features at.

@@ -1,16 +1,6 @@
 import dask
-
-
-def dask_map_function(eval_, invalid_ind):
-    results = []
-    for x in invalid_ind:
-        y = dask.delayed(eval_)(x)
-        results.append(y)
-    fitnesses = dask.compute(*results)
-    return fitnesses
-
-
 from sciunit.scores import ZScore
+from neuronunit.models.optimization_model_layer import OptimizationModel
 
 # from sciunit import TestSuite
 from sciunit.scores.collections import ScoreArray
@@ -35,6 +25,13 @@ from neuronunit.optimization.optimization_management import TSD
 import numpy as np
 import matplotlib.pyplot as plt
 
+def dask_map_function(eval_, invalid_ind):
+    results = []
+    for x in invalid_ind:
+        y = dask.delayed(eval_)(x)
+        results.append(y)
+    fitnesses = dask.compute(*results)
+    return fitnesses
 
 def glif_specific_modifications(tests):
 
@@ -139,9 +136,9 @@ def trace_explore_widget(optimal_model_params=None):
         "parameter a", min_value=0.01, max_value=0.1, value=0.05, step=0.001
     )
     if optimal_model_params is None:
-        dtc = DataTC(backend="IZHI", attrs=attrs)
+        dtc = OptimizationModel(backend="IZHI", attrs=attrs)
     else:
-        dtc = DataTC(backend="IZHI", attrs=optimal_model_params)
+        dtc = OptimizationModel(backend="IZHI", attrs=optimal_model_params)
     dtc.attrs["a"] = slider_value
     dtc = model_to_mode(dtc)
     temp_rh = dtc.rheobase
