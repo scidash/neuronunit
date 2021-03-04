@@ -1,4 +1,3 @@
-typing
 dask
 lxml==4.4.1
 elephant==0.4.1
@@ -29,6 +28,4 @@ quantities==0.12.4
 dask[bag]
 fsspec>=0.3.3
 cython
-git+ssh://git@github.com/russelljjarvis/sciunit@dev
-git+ssh://git@github.com/russelljjarvis/BluePyOpt@neuronunit_reduced_cells
 efel
