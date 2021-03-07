@@ -60,6 +60,7 @@ jobs:
       - run:
           name: Run Tests
           command:
+            sh tests.sh
             cd neuronunit/unit_test; coverals -m unittest rheobase_model_test.py; cd -;
             cd neuronunit/unit_test; coverage report
       - store_artifacts:
