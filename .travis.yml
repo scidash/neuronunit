@@ -32,7 +32,7 @@ install:
 script:
   - export NC_HOME='.' # NeuroConstruct isn't used but tests need this
                        # variable set to pass.
-  - cd neuronunit/unit_test; python -m unittest scores_unit_test.py; cd -;
+  #- cd neuronunit/unit_test; python -m unittest scores_unit_test.py; cd -;
   #- cd neuronunit/unit_test; python -m unittest rheobase_model_test.py; cd -;
   - sh test.sh
 after_success:
