@@ -57,3 +57,4 @@ jobs:
       - run: pip install git+https://github.com/russelljjarvis/eFEL
       - run: cd neuronunit/unit_test; python rheobase_model_test.py
       - run: cd neuronunit/unit_test; python -m unittest scores_unit_test.py
+      - run: asv run
