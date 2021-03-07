@@ -57,7 +57,7 @@ jobs:
       - run: pip install git+https://github.com/russelljjarvis/eFEL
       - run: pip install coveralls
       - run: sh build.sh
-      - run: sh tests.sh;
+      - run: sh test.sh;
       - run: cd neuronunit/unit_test; coveralls -m unittest rheobase_model_test.py; cd -;
       - run: cd neuronunit/unit_test; coverage report
       - store_artifacts:
