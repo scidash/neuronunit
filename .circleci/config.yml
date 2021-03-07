@@ -58,3 +58,12 @@ jobs:
       - run: cd neuronunit/unit_test; python rheobase_model_test.py
       - run: cd neuronunit/unit_test; python -m unittest scores_unit_test.py
       - run: asv run
+      - run: pip install coveralls
+      - run:
+          name: Run Tests
+          command: |
+            coverage run -m unittest scores_unit_test.py
+            coverage run -m unittest rheobase_model_test.py
+            coverage report
+      - store_artifacts:
+          path: htmlcov
