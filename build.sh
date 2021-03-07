@@ -24,6 +24,8 @@ pip install sklearn
 pip install seaborn
 pip install frozendict
 pip install plotly
+pip install igor
+pip install pylmeasure
 pip install --upgrade colorama
 rm -rf /opt/conda/lib/python3.8/site-packages/sciunit
 git clone -b dev https://github.com/russelljjarvis/sciunit.git

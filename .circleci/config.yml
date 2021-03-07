@@ -42,6 +42,7 @@ jobs:
       - run: pip install sklearn
       - run: pip install seaborn
       - run: pip install frozendict
+      - run: pip install igor
       #- run: pip install plotly
       - run: pip install allensdk==0.16.3
       - run: pip install --upgrade colorama
