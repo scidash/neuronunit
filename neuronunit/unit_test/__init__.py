@@ -34,8 +34,9 @@ from .test_tests import (
 from .misc_tests import EphysPropertiesTestCase
 
 # from .cache_tests import BackendCacheTestCase
-from .opt_ephys_properties import testOptimizationEphysCase
-from .scores_unit_test import testOptimizationAllenMultiSpike
+#from .opt_ephys_properties import testOptimizationEphysCase
+#from .scores_unit_test import testOptimizationAllenMultiSpike
+from .rheobase_model_test import testModelRheobase
 
 # from .adexp_opt import *
 """
