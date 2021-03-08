@@ -20,9 +20,6 @@ from allensdk.api.queries.glif_api import GlifApi
 import os
 import pickle
 from allensdk.api.queries.biophysical_api import BiophysicalApi
-from neuronunit.optimization.data_transport_container import DataTC
-
-# from allensdk.model.glif.glif_neuron import GlifNeuron
 
 from allensdk.core.cell_types_cache import CellTypesCache
 from allensdk.ephys.extract_cell_features import extract_cell_features

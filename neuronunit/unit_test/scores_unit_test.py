@@ -23,7 +23,7 @@ from neuronunit.optimization.optimization_management import (
     inject_and_plot_model
 )
 import numpy as np
-from neuronunit.optimization.data_transport_container import DataTC
+from neuronunit.models.optimization_model_layer import OptimizationModel
 from jithub.models import model_classes
 import matplotlib.pyplot as plt
 import quantities as qt
