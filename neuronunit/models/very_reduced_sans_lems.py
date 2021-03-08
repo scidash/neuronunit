@@ -1,17 +1,16 @@
 """NeuronUnit model class for reduced neuron models."""
 
-import sciunit
-import neuronunit.capabilities as cap
-from sciunit.models.runnable import RunnableModel
-
-
 import numpy as np
 from neo.core import AnalogSignal
 import quantities as pq
-#from neuronunit.optimization.data_transport_container import DataTC
 import copy
 
+import sciunit
+from sciunit.models.runnable import RunnableModel
+
 import neuronunit.capabilities.spike_functions as sf
+import neuronunit.capabilities as cap
+
 class VeryReducedModel(RunnableModel,
                        cap.ReceivesSquareCurrent,
                        cap.ProducesActionPotentials,
