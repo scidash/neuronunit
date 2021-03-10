@@ -30,6 +30,7 @@ import copy
 from frozendict import frozendict
 from itertools import repeat
 import random
+<<<<<<< HEAD
 
 
 import quantities as pq
@@ -46,12 +47,38 @@ from sciunit import TestSuite
 from sciunit import scores
 from sciunit.scores import RelativeDifferenceScore
 from sciunit.utils import config_set
+=======
+import matplotlib.pyplot as plt
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
+
+config_set("PREVALIDATE", False)
+
+<<<<<<< HEAD
+from jithub.models import model_classes
+
+from neuronunit.optimization.data_transport_container import DataTC
+=======
+import quantities as pq
+pq.quantity.PREFERRED = [pq.mV, pq.pA, pq.MOhm, pq.ms, pq.pF, pq.Hz / pq.pA]
+
+import efel
+import bluepyopt as bpop
+import bluepyopt.ephys as ephys
+from bluepyopt.parameters import Parameter
+
+import sciunit
+from sciunit import TestSuite
+from sciunit import scores
+from sciunit.scores import RelativeDifferenceScore
+from sciunit.utils import config_set
+from sciunit.models import RunnableModel
 
 config_set("PREVALIDATE", False)
 
 from jithub.models import model_classes
 
-from neuronunit.optimization.data_transport_container import DataTC
+from neuronunit.models.optimization_model_layer import OptimizationModel
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 from neuronunit.tests.base import AMPL, DELAY, DURATION
 from neuronunit.tests.target_spike_current import (
     SpikeCountSearch,
@@ -92,7 +119,11 @@ class TSD(dict):
         from IPython.display import display
 
         if hasattr(self, "ga_out"):
+<<<<<<< HEAD
             return display(self.ga_out["pf"][0].dtc.obs_preds)
+=======
+            return display(self.ga_out["pf"][0].model.obs_preds)
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
         else:
             return None
 
@@ -135,7 +166,11 @@ def random_p(model_type: str = "") -> dict:
 @cython.wraparound(False)
 def process_rparam(
     model_type: str = "", free_parameters: dict = None
+<<<<<<< HEAD
 ) -> Union[DataTC, dict]:
+=======
+) -> Union[OptimizationModel, dict]:
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     """
     -- Synopsis: generate random parameter sets.
     This is used to create varied and unpredictible
@@ -143,7 +178,11 @@ def process_rparam(
     robustness of optimization algorithms.
 
     --params: string specifying model type.
+<<<<<<< HEAD
     --output: a DataTC semi-model type instantiated
+=======
+    --output: a OptimizationModel semi-model type instantiated
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
      with the random model parameters.
     """
     random_param = random_p(model_type)
@@ -153,16 +192,27 @@ def process_rparam(
         for k in free_parameters:
             reduced_parameter_set[k] = rp[k]
         random_param = reduced_parameter_set
+<<<<<<< HEAD
     dsolution = DataTC(backend=backend, attrs=rp)
     temp_model = dsolution.dtc_to_model()
+=======
+    dsolution = OptimizationModel(backend=backend, attrs=rp)
+    temp_model = dsolution.model_to_model()
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     dsolution.attrs = temp_model.default_attrs
     dsolution.attrs.update(rp)
     return dsolution, random_param
 
 
+<<<<<<< HEAD
 def write_models_for_nml_db(dtc: DataTC):
     with open(str(list(dtc.attrs.values())) + ".csv", "w") as writeFile:
         df = pd.DataFrame([dtc.attrs])
+=======
+def write_models_for_nml_db(model: RunnableModel):
+    with open(str(list(model.attrs.values())) + ".csv", "w") as writeFile:
+        df = pd.DataFrame([model.attrs])
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
         writer = csv.writer(writeFile)
         writer.writerows(df)
 
@@ -194,30 +244,49 @@ def write_opt_to_nml(path: str, param_dict: dict):
 
 
 
+<<<<<<< HEAD
 #Should be Depricated, but is not.
 def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
+=======
+def get_rh(model: RunnableModel, rtest_class: RheobaseTest, bind_vm: bool = False) -> RunnableModel:
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     '''
     --Synpopsis: This approach should be redundant, but for
     some reason this method works when others fail.
     --args:
+<<<<<<< HEAD
         :param object dtc:
         :param object Rheobase Test Class:
     :-- returns: object dtc:
+=======
+        :param object model:
+        :param object Rheobase Test Class:
+    :-- returns: object model:
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     -- Synopsis: This is used to recover/produce
      a rheobase test class instance,
      given unknown experimental observations.
     '''
     place_holder = {"mean": None * pq.pA}
+<<<<<<< HEAD
     #backend_ = dtc.backend
     rtest = RheobaseTest(observation=place_holder, name="RheobaseTest")
     rtest.score_type = RelativeDifferenceScore
     assert len(dtc.attrs)
     model = dtc.dtc_to_model()
+=======
+    #backend_ = model.backend
+    rtest = RheobaseTest(observation=place_holder, name="RheobaseTest")
+    rtest.score_type = RelativeDifferenceScore
+    assert len(model.attrs)
+    model = model.model_to_model()
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     rtest.params["injected_square_current"] = {}
     rtest.params["injected_square_current"]["delay"] = DELAY
     rtest.params["injected_square_current"]["duration"] = DURATION
     #return rtest
 
+<<<<<<< HEAD
     dtc.rheobase = rtest.generate_prediction(model)["value"]
     if bind_vm:
         temp_vm = model.get_membrane_potential()
@@ -231,18 +300,41 @@ def get_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Dat
 
 
 def eval_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> DataTC:
+=======
+    model.rheobase = rtest.generate_prediction(model)["value"]
+    if bind_vm:
+        temp_vm = model.get_membrane_potential()
+        model.vmrh = temp_vm
+    if np.isnan(np.min(temp_vm)):
+        # rheobase exists but the waveform is nuts.
+        # this is the fastest way to filter out a gene
+        model.rheobase = None
+    return model
+
+
+
+def eval_rh(model: RunnableModel, rtest_class: RheobaseTest, bind_vm: bool = False) -> RunnableModel:
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     """
     --Synpopsis: This approach should be redundant, but for
     some reason this method works when others fail.
     --args:
+<<<<<<< HEAD
         :param object dtc:
         :param object Rheobase Test Class:
     :-- returns: object dtc: with rheobase solution stored as an updated
         dtc object attribute
+=======
+        :param object model:
+        :param object Rheobase Test Class:
+    :-- returns: object model: with rheobase solution stored as an updated
+        model object attribute
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     -- Synopsis: This is used to recover/produce
      a rheobase test class instance,
      given unknown experimental observations.
     """
+<<<<<<< HEAD
     assert len(dtc.attrs)
     model = dtc.dtc_to_model()
     rtest.params["injected_square_current"] = {}
@@ -260,6 +352,25 @@ def eval_rh(dtc: DataTC, rtest_class: RheobaseTest, bind_vm: bool = False) -> Da
 
 
 def get_new_rtest(dtc: DataTC) -> RheobaseTest:
+=======
+    assert len(model.attrs)
+    model = model.model_to_model()
+    rtest.params["injected_square_current"] = {}
+    rtest.params["injected_square_current"]["delay"] = DELAY
+    rtest.params["injected_square_current"]["duration"] = DURATION
+    model.rheobase = rtest.generate_prediction(model)["value"]
+    if bind_vm:
+        temp_vm = model.get_membrane_potential()
+        model.vmrh = temp_vm
+    if np.isnan(np.min(temp_vm)):
+        # rheobase exists but the waveform is nuts.
+        # this is the fastest way to filter out a gene
+        model.rheobase = None
+    return model
+
+
+def get_new_rtest(model: RunnableModel) -> RheobaseTest:
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     place_holder = {"mean": 10 * pq.pA}
     f = RheobaseTest
     rtest = f(observation=place_holder, name="RheobaseTest")
@@ -267,6 +378,7 @@ def get_new_rtest(dtc: DataTC) -> RheobaseTest:
     return rtest
 
 
+<<<<<<< HEAD
 def get_rtest(dtc: DataTC) -> RheobaseTest:
     if not hasattr(dtc, "tests"):
         rtest = get_new_rtest(dtc)
@@ -294,12 +406,74 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
             rtest = get_rtest(dtc)
     else:
         rtest = get_rtest(dtc)
+=======
+def get_rtest(model: RunnableModel) -> RheobaseTest:
+    if not hasattr(model, "tests"):
+        rtest = get_new_rtest(model)
+    else:
+        if type(model.tests) is type(list()):
+            rtests = [t for t in model.tests if "rheo" in t.name.lower()]
+        else:
+            rtests = [v for k, v in model.tests.items() if "rheo" in str(k).lower()]
+        if len(rtests):
+            rtest = rtests[0]
+        else:
+            rtest = get_new_rtest(model)
+    return rtest
+def dtc_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
+    #--Synopsis: If  test taking data, and objects are present (observations etc).
+    #Take the rheobase test and store it in the data transport container.
+    if hasattr(model, "tests"):
+        if type(model.tests) is type({}) and str("RheobaseTest") in model.tests.keys():
+            rtest = model.tests["RheobaseTest"]
+        else:
+            rtest = get_rtest(model)
+    else:
+        rtest = get_rtest(model)
     if rtest is None:#
         # If neuronunit models are run without first
         # defining neuronunit tests, we run only
         # generate_prediction/extract_features methods.
         # but still need to construct tests somehow
         # test construction requires an observation.
+        model = get_rh(model,rtest)
+        model = eval_rh(model,rtest)
+
+    if rtest is not None:
+        if isinstance(rtest, Iterable):
+            rtest = rtest[0]
+        model.rheobase = rtest.generate_prediction(model)["value"]
+        temp_vm = model.get_membrane_potential()
+        min = np.min(temp_vm)
+        if np.isnan(temp_vm.any()):
+            model.rheobase = None
+        if bind_vm:
+            model.vmrh = temp_vm
+        if rtest is None:
+            raise Exception("rheobase test is still None despite efforts")
+        # rheobase does exist but lets filter out this bad gene.
+    return model
+
+def model_to_rheo(model: RunnableModel, bind_vm: bool = False) -> RunnableModel:
+    """
+    --Synopsis: If  test taking data, and objects are present (observations etc).
+    Take the rheobase test and store it in the data transport container.
+    """
+    if hasattr(model, "tests"):
+        if type(model.tests) is type({}) and str("RheobaseTest") in model.tests.keys():
+            rtest = model.tests["RheobaseTest"]
+        else:
+            rtest = get_rtest(model)
+    else:
+        rtest = get_rtest(model)
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
+    if rtest is None:#
+        # If neuronunit models are run without first
+        # defining neuronunit tests, we run only
+        # generate_prediction/extract_features methods.
+        # but still need to construct tests somehow
+        # test construction requires an observation.
+<<<<<<< HEAD
         #if dtc.rheobase is None:
         #dtc = get_rh(dtc,rtest)
         dtc = get_rh(dtc,rtest)
@@ -330,6 +504,26 @@ def dtc_to_rheo(dtc: DataTC, bind_vm: bool = False) -> DataTC:
     # if bind_vm:
     #    dtc.vmrh = temp_vm
     # return dtc
+=======
+        model = get_rh(model,rtest)
+        model = eval_rh(model,rtest)
+
+    if rtest is not None:
+        if isinstance(rtest, Iterable):
+            rtest = rtest[0]
+        model.rheobase = rtest.generate_prediction(model)["value"]
+        temp_vm = model.get_membrane_potential()
+        min = np.min(temp_vm)
+        if np.isnan(temp_vm.any()):
+            model.rheobase = None
+        if bind_vm:
+            model.vmrh = temp_vm
+        if rtest is None:
+            raise Exception("rheobase test is still None despite efforts")
+        # rheobase does exist but lets filter out this bad gene.
+    return model
+
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 
 
 def basic_expVar(trace1, trace2):
@@ -357,6 +551,7 @@ def basic_expVar(trace1, trace2):
         )
 
 
+<<<<<<< HEAD
 def train_length(dtc: DataTC) -> DataTC:
     if not hasattr(dtc, "efel"):
         dtc.efel = [{}]
@@ -369,11 +564,26 @@ def train_length(dtc: DataTC) -> DataTC:
 def multi_spiking_feature_extraction(
     dtc: DataTC, solve_for_current: bool = None, efel_filter_iterable: List = None
 ) -> DataTC:
+=======
+def train_length(model: RunnableModel) -> RunnableModel:
+    if not hasattr(model, "efel"):
+        model.efel = [{}]
+    vm = model.vm_soma
+    train_len = float(len(sf.get_spike_train(vm)))
+    model.efel["Spikecount"] = train_len
+    return model
+
+
+def multi_spiking_feature_extraction(
+    model: RunnableModel, solve_for_current: bool = None, efel_filter_iterable: List = None
+) -> RunnableModel:
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     """
     Perform multi spiking feature extraction
     via EFEL because its fast
     """
     if solve_for_current is None:
+<<<<<<< HEAD
         dtc = inject_model_soma(dtc)
         if dtc.vm_soma is None:  # or dtc.exclude is True:
             return dtc
@@ -634,6 +844,273 @@ def _opt_(
     obs_preds = []
     scores = []
 
+=======
+        model = inject_model_soma(model)
+        if model.vm_soma is None:  # or model.exclude is True:
+            return model
+        model = efel_evaluation(model, efel_filter_iterable)
+        model.vm_soma = None
+    else:
+        model = inject_model_soma(model, solve_for_current=solve_for_current)
+
+        if model.vm_soma is None:  # or model.exclude is True:
+            model.efel = None
+            return model
+
+        model = efel_evaluation(model, efel_filter_iterable)
+    if hasattr(model, "efel"):
+        if model.efel is not None:
+            model = train_length(model)
+
+    else:
+        model.efel = None
+
+    return model
+
+
+def constrain_ahp(vm_used: Any = object()) -> dict:
+    efel.reset()
+    efel.setThreshold(0)
+    trace3 = {
+        "T": [float(t) * 1000.0 for t in vm_used.times],
+        "V": [float(v) for v in vm_used.magnitude],
+    }
+    DURATION = 1100 * pq.ms
+    DELAY = 100 * pq.ms
+    trace3["stim_end"] = [float(DELAY) + float(DURATION)]
+    trace3["stim_start"] = [float(DELAY)]
+    simple_ahp_constraint_list = ["AHP_depth", "AHP_depth_abs", "AHP_depth_last"]
+    results = efel.getMeanFeatureValues(
+        [trace3], simple_ahp_constraint_list, raise_warnings=False
+    )
+    return results
+
+
+def exclude_non_viable_deflections(responses: dict = {}) -> float:
+    """
+    Synopsis: reject waveforms that would otherwise score well but have
+    unrealistically huge AHP
+    """
+    if responses["response"] is not None:
+        vm = responses["response"]
+        results = constrain_ahp(vm)
+        results = results[0]
+        if results["AHP_depth"] is None or np.abs(results["AHP_depth_abs"]) >= 80:
+            return 1000.0
+        if np.abs(results["AHP_depth"]) >= 105:
+            return 1000.0
+        if np.max(vm) >= 0:
+            snippets = get_spike_waveforms(vm)
+            widths = spikes2widths(snippets)
+            spike_train = threshold_detection(vm, threshold=0 * pq.mV)
+            if not len(spike_train):
+                return 1000.0
+
+            if (spike_train[0] + 2.5 * pq.ms) > vm.times[-1]:
+                too_long = True
+                return 1000.0
+            if isinstance(widths, Iterable):
+                for w in widths:
+                    if w >= 3.5 * pq.ms:
+                        return 1000.0
+            else:
+                width = widths
+                if width >= 2.0 * pq.ms:
+                    return 1000.0
+            if float(vm[-1]) == np.nan or np.isnan(vm[-1]):
+                return 1000.0
+            if float(vm[-1]) >= 0.0:
+                return 1000.0
+            assert vm[-1] < 0 * pq.mV
+        return 0
+
+
+class NUFeature_standard_suite(object):
+    def __init__(self, test, model):
+        self.test = test
+        print(self.test)
+        self.model = model
+        self.score_array = None
+
+    def calculate_score(self, responses: dict = {}) -> float:
+        model = responses["model"]
+        #model = model.model_to_model()
+        model.attrs = responses["params"]
+        self.test = initialise_test(self.test)
+        if self.test.active and responses["model"].rheobase is not None:
+            result = exclude_non_viable_deflections(responses)
+            if result != 0:
+                return result
+        if str("RheobaseTest") in self.test.name:
+            self.test.target_number_spikes = None
+            self.test.target_number_spikes = 1
+
+        self.test.prediction = self.test.generate_prediction(model)
+        if responses["rheobase"] is not None:
+
+            if self.test.prediction is not None:
+                score_gene = self.test.judge(
+                    model, prediction=self.test.prediction, deep_error=True
+                )
+            else:
+                return 1000.0
+        else:
+            return 1000.0
+        if not isinstance(type(score_gene), type(None)):
+            if not isinstance(score_gene, sciunit.scores.InsufficientDataScore):
+                try:
+                    if not isinstance(type(score_gene.raw), type(None)):
+                        lns = np.abs(np.float(score_gene.raw))
+                    else:
+                        if not isinstance(type(score_gene.raw), type(None)):
+                            # works 1/2 time that log_norm_score does not work
+                            # more informative than nominal bad score 100
+                            lns = np.abs(np.float(score_gene.raw))
+                            # works 1/2 time that log_norm_score does not work
+                            # more informative than nominal bad score 100
+
+                except:
+                    lns = 1000
+            else:
+                lns = 1000
+        else:
+            lns = 1000
+        if lns == np.inf or lns == np.nan:
+            lns = 1000
+
+        return lns
+
+
+def make_evaluator(
+    nu_tests: Iterable,
+    PARAMS: Iterable,
+    experiment: str = str("Neocortex pyramidal cell layer 5-6"),
+    model_type: str = str("IZHI"),
+    score_type: Any = RelativeDifferenceScore,
+) -> Union[Any, Any, Any, List[Any]]:
+    """
+    --Synopsis: make a BluePyOpt genetic algorithm evaluator
+    ie an object that has a model attribute,
+    and a fitness calculation method.
+    Using these attributes the evaluator
+    can update parameters on the model,
+    and then can calculate appropriate objective
+    fitness/scores. The genetic algorithm can thus use this
+    object to evolve genes, but also the human user of the
+    GA can use the evaluator to find the fitness of any
+    particular model parameterization.
+    """
+
+    if type(nu_tests) is type(dict()):
+        nu_tests = list(nu_tests.values())
+    if model_type == "IZHI":
+        simple_cell = model_classes.IzhiModel()
+    if model_type == "MAT":
+        simple_cell = model_classes.MATModel()
+    if model_type == "ADEXP":
+        simple_cell = model_classes.ADEXPModel()
+    simple_cell.params = PARAMS[model_type]
+    simple_cell.NU = True
+    simple_cell.name = model_type + experiment
+    objectives = []
+    for tt in nu_tests:
+        feature_name = tt.name
+        tt.score_type = score_type
+        ft = NUFeature_standard_suite(tt, simple_cell)
+        objective = ephys.objectives.SingletonObjective(feature_name, ft)
+        objectives.append(objective)
+
+    score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
+    sweep_protocols = []
+    protocol = ephys.protocols.NeuronUnitAllenStepProtocol("onestep", [None], [None])
+    sweep_protocols.append(protocol)
+    onestep_protocol = ephys.protocols.SequenceProtocol(
+        "onestep", protocols=sweep_protocols
+    )
+    cell_evaluator = ephys.evaluators.CellEvaluator(
+        cell_model=simple_cell,
+        param_names=list(copy.copy(BPO_PARAMS)[model_type].keys()),
+        fitness_protocols={onestep_protocol.name: onestep_protocol},
+        fitness_calculator=score_calc,
+        sim="euler",
+    )
+    simple_cell.params_by_names(copy.copy(BPO_PARAMS)[model_type].keys())
+    return (cell_evaluator, simple_cell, score_calc, [tt.name for tt in nu_tests])
+
+
+def get_binary_file_downloader_html(bin_file_path, file_label="File"):
+    """
+    --Synopsis: Intended to be used with streamlit/frontend.
+    Allows someone to download a pickle version of
+    python models that are output from the optimization process.
+    """
+    with open(bin_file_path, "rb") as f:
+        data = f.read()
+    bin_str = base64.b64encode(data).decode()
+    href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{os.path.basename(bin_file_path)}">Download {file_label}</a>'
+    return href
+
+
+def rescale(v: pq):
+    """
+    --Synopsis: default rescaling quantities SI units are often not desirable.
+    this method helps circumnavigates quantities defaults, instead
+    the method tries to apply neuroscience relevant units as a first preference.
+    A constant "rescale preffered was defined as a CONSTANT at the top of this file"
+    --params: v is a qauntities type object (often a float multiplied by a si unit)
+    --returns rescaled units
+    """
+    v.rescale_preferred()
+    v = v.simplified
+    if np.round(v, 2) != 0:
+        v = np.round(v, 2)
+    return v
+
+
+def _opt_(
+    constraints,
+    PARAMS,
+    test_key,
+    model_value,
+    MU,
+    NGEN,
+    diversity,
+    use_streamlit=False,
+    score_type=RelativeDifferenceScore,
+):
+    """
+    --Synopsis: A private interface for optimizing with neuron unit ephys type tests
+    """
+
+    if type(constraints) is not type(list()):
+        constraints = list(constraints.values())
+    cell_evaluator, simple_cell, score_calc, test_names = make_evaluator(
+        constraints, PARAMS, test_key, model_type=model_value, score_type=score_type
+    )
+    model_type = str("_best_fit_") + str(model_value) + "_" + str(test_key) + "_.p"
+    mut = 0.125
+    cxp = 0.6125
+    optimization = bpop.optimisations.DEAPOptimisation(
+        evaluator=cell_evaluator,
+        offspring_size=MU,
+        map_function=map,
+        selector_name=diversity,
+        mutpb=mut,
+        cxpb=cxp,
+        neuronunit=True,
+    )
+
+    final_pop, hall_of_fame, logs, hist = optimization.run(max_ngen=NGEN)
+
+    best_ind = hall_of_fame[0]
+    best_ind_dict = cell_evaluator.param_dict(best_ind)
+    model = cell_evaluator.cell_model
+    cell_evaluator.param_dict(best_ind)
+    tests = constraints
+    obs_preds = []
+    scores = []
+
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     for t in tests:
         scores.append(t.judge(model, prediction=t.prediction))
         if "mean" in t.observation.keys():
@@ -659,7 +1136,11 @@ def _opt_(
     model.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
+<<<<<<< HEAD
     opt = model.model_to_dtc()
+=======
+    opt = model#.model_to_model()
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     opt.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }
@@ -715,16 +1196,28 @@ from neuronunit.tests.target_spike_current import SpikeCountSearch
 
 
 def inject_model_soma(
+<<<<<<< HEAD
     dtc: DataTC,
+=======
+    model: RunnableModel,
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     figname=None,
     solve_for_current=None,
     fixed: bool = False,
     final_run=False,
+<<<<<<< HEAD
 ) -> DataTC:
 
     """
     -- Synpopsis: this method changes the DataTC object (side effects)
     -- args: dtc: containing spike number attribute.
+=======
+) -> RunnableModel:
+
+    """
+    -- Synpopsis: this method changes the OptimizationModel object (side effects)
+    -- args: model: containing spike number attribute.
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     the spike number attribute signifies the number of spikes wanted.
     if solve_for_current is True find the current that causes the
     wanted spike number. If solve_for_current is False
@@ -732,7 +1225,11 @@ def inject_model_soma(
 
     -- outputs: voltage that causes a desired number of spikes,
                 current Injection Parameters,
+<<<<<<< HEAD
                 dtc
+=======
+                model
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     -- Synopsis:
      produce an rheobase injection value
      produce an object of class Neuronunit runnable Model
@@ -740,16 +1237,26 @@ def inject_model_soma(
     """
     if type(solve_for_current) is not type(None):
         observation_range = {}
+<<<<<<< HEAD
         model = dtc.dtc_to_model()
         model._backend.attrs = dtc.attrs
 
         if not fixed:
             observation_range["value"] = dtc.spk_count
+=======
+
+        if not fixed:
+            observation_range["value"] = model.spk_count
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
             scs = SpikeCountSearch(observation_range)
             target_current = scs.generate_prediction(model)
             if type(target_current) is not type(None):
                 solve_for_current = target_current["value"]
+<<<<<<< HEAD
             dtc.solve_for_current = solve_for_current
+=======
+            model.solve_for_current = solve_for_current
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 
         uc = {
             "amplitude": solve_for_current,
@@ -757,6 +1264,7 @@ def inject_model_soma(
             "delay": ALLEN_DELAY,
             "padding": 342.85 * pq.ms,
         }
+<<<<<<< HEAD
         # model = dtc.dtc_to_model()
         # temp = model.attrs
         model.inject_square_current(**uc)
@@ -771,11 +1279,25 @@ def inject_model_soma(
         # dtc.spikes = n_spikes
         vm_soma = model.get_membrane_potential()
         dtc.vm_soma = vm_soma
+=======
+        model.inject_square_current(**uc)
+        n_spikes = model.get_spike_count()
+        if n_spikes != model.spk_count:
+            model.exclude = True
+        else:
+            model.exclude = False
+        vm_soma = model.get_membrane_potential()
+        model.vm_soma = vm_soma
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
         ##
         # Refactor somewhere else, this simulation takes time.
         # the rmp calculation somewhere else.
         ##
+<<<<<<< HEAD
         return dtc
+=======
+        return model
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 
 
 def still_more_features(
@@ -786,18 +1308,32 @@ def still_more_features(
     as features, so that they can be used
     as features to optimize with.
     """
+<<<<<<< HEAD
     if hasattr(instance_obj, "dtc_to_model"):
         model = instance_obj
         model = dtc.dtc_to_model()
         model._backend.attrs = dtc.attrs
     else:
         dtc = instance_obj
+=======
+    if hasattr(instance_obj, "model_to_model"):
+        model = instance_obj
+        model = model.model_to_model()
+        model._backend.attrs = model.attrs
+    else:
+        model = instance_obj
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     uc["amplitude"] = 0 * pq.pA
     model.inject_square_current(**uc)
     vr = model.get_membrane_potential()
     vmr = np.mean(vr)
+<<<<<<< HEAD
     dtc.vmr = None
     dtc.vmr = vmr
+=======
+    model.vmr = None
+    model.vmr = vmr
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     del model
 
     if target_vm is not None:
@@ -814,6 +1350,7 @@ def spike_time_errors(
     """
     -- Synopsis: Generate simple errors simply based on spike times.
     """
+<<<<<<< HEAD
     if hasattr(instance_obj, "spikes"):
         spikes = instance_obj.spikes
     else:
@@ -848,6 +1385,42 @@ def efel_evaluation(
         else:
             target_vm = None
     else:
+=======
+    #if hasattr(instance_obj, "spikes"):
+    #    spikes = instance_obj.spikes
+    #else:
+    spikes = threshold_detection(vm_used)
+    for index, tc in enumerate(spikes):
+        results[0]["spike_" + str(index)] = float(tc)
+    return instance_obj, results
+
+
+def efel_evaluation(
+    instance_obj: Any, efel_filter_iterable: Iterable = None, current: float = None
+) -> Any:
+    """
+    -- Synopsis: evaluate efel feature extraction criteria against on
+    reduced cell models and probably efel data.
+    -- Args: efel_filter_iterable an Iterable that can be a list or a dictionary.
+        If it is a dictionary, then the keys are the features that efel should extract,
+        and the values are the SI units that belong to that feature (often units are None).
+        This method works on both sciunit runnable models
+        and OptimizationModel objects.
+        efel_filter_iterable: is the list of efel features to extract
+        it can be a list or a dictionary, if it is a list, the keys should be feature units
+        current is the value of current amplitude to evaluate the model features at.
+    """
+    if isinstance(efel_filter_iterable, type(list())):
+        efel_filter_list = efel_filter_iterable
+    if isinstance(efel_filter_iterable, type(dict())):
+        efel_filter_list = list(efel_filter_iterable.keys())
+        if "extra_tests" in efel_filter_iterable.keys():
+            if "var_expl" in efel_filter_iterable["extra_tests"].keys():
+                target_vm = efel_filter_iterable["extra_tests"]["var_expl"]
+        else:
+            target_vm = None
+    else:
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
         target_vm = None
 
     vm_used = instance_obj.vm_soma
@@ -931,7 +1504,11 @@ def apply_units_to_efel(instance_obj, efel_filter_iterable):
 
 
 def inject_and_plot_model(
+<<<<<<< HEAD
     dtc: DataTC, figname=None, plotly=True, verbose=False
+=======
+    model: RunnableModel, figname=None, plotly=True, verbose=False
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 ) -> Union[Any, Any, Any]:
     """
     -- Synopsis: produce rheobase injection value
@@ -939,6 +1516,7 @@ def inject_and_plot_model(
     with known attributes
     and known rheobase current injection value.
     """
+<<<<<<< HEAD
     dtc = dtc_to_rheo(dtc)
     model = dtc.dtc_to_model()
     uc = {"amplitude": dtc.rheobase, "duration": DURATION, "delay": DELAY}
@@ -947,17 +1525,29 @@ def inject_and_plot_model(
     else:
         vm = model.inject_square_current(uc)
     vm = model.get_membrane_potential()
+=======
+    model = model_to_rheo(model)
+    uc = {"amplitude": model.rheobase, "duration": DURATION, "delay": DELAY}
+    vm = model.inject_square_current(**uc)
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     if verbose:
         if vm is not None:
             print(vm[-1], vm[-1] < 0 * pq.mV)
     if vm is None:
         return [None, None, None]
     if not plotly:
+<<<<<<< HEAD
         import matplotlib.pyplot as plt
 
         plt.clf()
         plt.figure()
         if dtc.backend in str("HH"):
+=======
+
+        plt.clf()
+        plt.figure()
+        if str(model.backend) in str("HH"):
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
             plt.title("Conductance based model membrane potential plot")
         else:
             plt.title("Membrane potential plot")
@@ -974,8 +1564,13 @@ def inject_and_plot_model(
         if figname is not None:
             fig.write_image(str(figname) + str(".png"))
         else:
+<<<<<<< HEAD
             return vm, fig, dtc
     return [vm, plt, dtc]
+=======
+            return vm, fig, model
+    return [vm, plt, model]
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 
 
 def switch_logic(xtests: Any = None) -> List:
@@ -1034,6 +1629,18 @@ def active_values(keyed: dict, rheobase, square: dict = None) -> dict:
         else:
             keyed["injected_square_current"]["amplitude"] = rheobase
     return keyed
+<<<<<<< HEAD
+
+
+def passive_values(keyed: dict = {}) -> dict:
+    PASSIVE_DURATION = 500.0 * pq.ms
+    PASSIVE_DELAY = 200.0 * pq.ms
+    keyed["injected_square_current"] = {}
+    keyed["injected_square_current"]["delay"] = PASSIVE_DELAY
+    keyed["injected_square_current"]["duration"] = PASSIVE_DURATION
+    keyed["injected_square_current"]["amplitude"] = -10 * pq.pA
+    return keyed
+=======
 
 
 def passive_values(keyed: dict = {}) -> dict:
@@ -1045,6 +1652,7 @@ def passive_values(keyed: dict = {}) -> dict:
     keyed["injected_square_current"]["amplitude"] = -10 * pq.pA
     return keyed
 
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 
 def neutral_values(keyed: dict = {}) -> dict:
     PASSIVE_DURATION = 500.0 * pq.ms
@@ -1055,6 +1663,18 @@ def neutral_values(keyed: dict = {}) -> dict:
     keyed["injected_square_current"]["amplitude"] = 0 * pq.pA
     return keyed
 
+<<<<<<< HEAD
+def neutral_values(keyed: dict = {}) -> dict:
+    PASSIVE_DURATION = 500.0 * pq.ms
+    PASSIVE_DELAY = 200.0 * pq.ms
+    keyed["injected_square_current"] = {}
+    keyed["injected_square_current"]["delay"] = PASSIVE_DELAY
+    keyed["injected_square_current"]["duration"] = PASSIVE_DURATION
+    keyed["injected_square_current"]["amplitude"] = 0 * pq.pA
+    return keyed
+
+=======
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 
 def initialise_test(v: Any, rheobase: Any = None) -> dict:
     """

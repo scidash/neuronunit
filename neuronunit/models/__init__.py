@@ -2,7 +2,10 @@
 
 import warnings
 from .static import StaticModel, ExternalModel, RandomVmModel
-from .lems import LEMSModel
-from .channel import ChannelModel
+try:
+    from .lems import LEMSModel
+    from .channel import ChannelModel
+except:
+    print("neuroml not installed")
 from .reduced import ReducedModel
 from . import backends  # Required to register backends

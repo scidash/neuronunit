@@ -26,8 +26,13 @@ from neuronunit.optimization.model_parameters import (
     to_bpo_param,
 )
 from neuronunit.optimization.optimization_management import inject_model_soma
+<<<<<<< HEAD
 from neuronunit.optimization.data_transport_container import DataTC
 from jithub.models import model_classes
+=======
+from jithub.models import model_classes
+from neuronunit.models.optimization_model_layer import OptimizationModel
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 
 from sciunit.scores import RelativeDifferenceScore
 

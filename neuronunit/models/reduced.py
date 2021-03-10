@@ -9,6 +9,7 @@ from .lems import LEMSModel
 from .static import ExternalModel
 import neuronunit.capabilities.spike_functions as sf
 from copy import deepcopy
+from sciunit.models import RunnableModel
 
 class ReducedModel(LEMSModel,
                    cap.ReceivesSquareCurrent,
@@ -56,8 +57,7 @@ class ReducedModel(LEMSModel,
         self.set_run_params(injected_square_current=current)
         self._backend.inject_square_current(current)
 
-
-class VeryReducedModel(ExternalModel,
+class VeryReducedModel(RunnableModel,
                    cap.ReceivesCurrent,
                    cap.ProducesActionPotentials,
                    ):

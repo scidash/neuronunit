@@ -95,16 +95,26 @@ def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb, gen, ngen
     for x in range(0, len(parents[0])):
         BOUND_LOW.append(toolbox.uniformparams.args[0][x])
         BOUND_UP.append(toolbox.uniformparams.args[1][x])
+<<<<<<< HEAD
     ETA = int(30.0 * (1 - (gen / ngen)))
     toolbox.register(
         "mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=ETA
+=======
+    eta = int(30.0 * (1 - (gen / ngen)))
+    toolbox.register(
+        "mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=eta
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
     )
     toolbox.register(
         "mutate",
         tools.mutPolynomialBounded,
         low=BOUND_LOW,
         up=BOUND_UP,
+<<<<<<< HEAD
         eta=ETA,
+=======
+        eta=eta,
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
         indpb=1.0 / NDIM,
     )
     if (1 - (gen / ngen)) / 2.0 > 0.05:
@@ -115,6 +125,10 @@ def _get_offspring_time_diminishing_eta(parents, toolbox, cxpb, mutpb, gen, ngen
         cxpb = (1 - (gen / ngen)) / 1.1
     else:
         cxpb = 0.4
+<<<<<<< HEAD
+=======
+    #print(eta,cxpb,mutpb,': Best eta,cxpb,mutpb value?')
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 
     if hasattr(toolbox, "variate"):
 
@@ -238,6 +252,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         _record_stats(stats, logbook, start_gen, population, invalid_count)
         logger.info(logbook.stream)
     stopping_criteria = [MaxNGen(ngen)]
+<<<<<<< HEAD
 
     # Begin the generational process
     gen = start_gen + 1
@@ -253,13 +268,45 @@ def eaAlphaMuPlusLambdaCheckpoint(
         stop = _check_stopping_criteria(stopping_criteria, stopping_params)
 
         invalid_count = _evaluate_invalid_fitness(toolbox, offspring)
+=======
+
+    # Begin the generational process
+    gen = start_gen + 1
+    stopping_params = {"gen": gen}
+    pbar = tqdm(total=ngen)
+    old = 0
+    deltas = []
+    while not (_check_stopping_criteria(stopping_criteria, stopping_params)):
+        offspring1 = _get_offspring(parents, toolbox, cxpb, mutpb)
+        #offspring1 = _get_offspring_time_diminishing_eta(
+        #    parents, toolbox, cxpb, mutpb, gen, ngen
+        #)
+        population = parents + offspring1 + [halloffame[0]]
+
+        stop = _check_stopping_criteria(stopping_criteria, stopping_params)
+        invalid_count = _evaluate_invalid_fitness(toolbox, offspring1)
+        #comp1 = np.sum([ind.fitness.values for ind in offspring1])
+        #if old:
+        #    delta = np.abs(comp1-old)
+        #    deltas.append((comp1,delta))#,mutpb,cxpb,eta))
+        #old = comp1
+        #print(deltas)
+        #comp1 = np.sum([ind.fitness.values for ind in offspring1])
+        #print('regular',comp1,'time diminishing')#,comp1)
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
         _update_history_and_hof(halloffame, history, population)
         _record_stats(stats, logbook, gen, population, invalid_count)
         # Select the next generation parents
         ##
         # was /4
         ##
+<<<<<<< HEAD
         parents = toolbox.select(population, int(mu / 2.5))
+=======
+        parents = toolbox.select(population, int(mu / 2))
+        parents = filter_parents(parents)
+
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
         logger.info(logbook.stream)
 
         if cp_filename and cp_frequency and gen % cp_frequency == 0:

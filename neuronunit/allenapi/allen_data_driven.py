@@ -72,14 +72,10 @@ def opt_setup(
     if "vm_soma" in suite.traces.keys():
         target = StaticModel(vm=suite.traces["vm_soma"])
         target.vm_soma = suite.traces["vm_soma"]
-    else:
-        target = StaticModel(vm=suite.traces["vm15"])
-        target.vm_soma = suite.traces["vm15"]
 
     nu_tests = suite.tests
 
     attrs = {k: np.mean(v) for k, v in MODEL_PARAMS[model_type].items()}
-    dtc = DataTC(backend=model_type, attrs=attrs)
     for t in nu_tests:
         if t.name == "Spikecount":
             spk_count = float(t.observation["mean"])
@@ -98,6 +94,8 @@ def opt_setup(
         target_current = None
     else:
         scs = SpikeCountSearch(observation_range)
+        assert template_model is not None
+
         target_current = scs.generate_prediction(template_model)
     template_model.seeded_current = target_current["value"]
 
@@ -128,7 +126,8 @@ def wrap_setups(
         )
     else:
     """
-    template_model, suite, nu_tests, target_current, spk_count = opt_setup(
+    assert template_model is not None
+    [ template_model, suite, nu_tests, target_current, spk_count ] = opt_setup(
         specimen_id,
         model_type,
         target_num_spikes,
@@ -140,7 +139,6 @@ def wrap_setups(
     )
     template_model.seeded_current = target_current["value"]
     template_model.allen = True
-    template_model.seeded_current
     template_model.NU = True
     template_model.backend = model_type
     template_model.efel_filter_iterable = efel_filter_iterable
@@ -201,8 +199,6 @@ class NUFeatureAllenMultiSpike(object):
 
             if np.nan == delta or delta == np.inf:
                 delta = 1000.0
-            # print(self.test.name,'delta',delta)
-
             return delta
         else:
             if features[feature_name] is None:
@@ -211,10 +207,13 @@ class NUFeatureAllenMultiSpike(object):
             prediction = {"value": np.mean(features[self.test.name])}
             score_gene = self.test.judge(responses["model"], prediction=prediction)
             if score_gene is not None:
-                if score_gene.raw is not None:
-                    delta = np.abs(float(score_gene.raw))
+                if score_gene.log_norm_score is not None:
+                    delta = np.abs(float(score_gene.log_norm_score))
                 else:
-                    delta = 1000.0
+                    if score_gene.raw is not None:
+                        delta = np.abs(float(score_gene.raw))
+                    else:
+                        delta = 1000.0
             else:
                 delta = 1000.0
             # if np.nan == delta or delta == np.inf:
@@ -282,7 +281,7 @@ def opt_exec(
     optimisation = bpop.optimisations.DEAPOptimisation(
         evaluator=cell_evaluator,
         offspring_size=MU,
-        eta=29,  # was 35, # was 25
+        eta=35,  # was 35, # was 25
         map_function=map,
         selector_name="IBEA",
         mutpb=mutpb,
@@ -308,7 +307,7 @@ def opt_to_model(hall_of_fame, cell_evaluator, suite, target_current, spk_count)
         )
     df = pd.DataFrame(obs_preds)
 
-    opt = model.model_to_dtc()
+    opt = model#.model_to_dtc()
     opt.attrs = {
         str(k): float(v) for k, v in cell_evaluator.param_dict(best_ind).items()
     }

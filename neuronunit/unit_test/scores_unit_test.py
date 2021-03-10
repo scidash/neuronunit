@@ -20,11 +20,18 @@ from neuronunit.optimization.model_parameters import (
     to_bpo_param,
 )
 from neuronunit.optimization.optimization_management import (
+<<<<<<< HEAD
     dtc_to_rheo,
     inject_and_plot_model,
 )
 import numpy as np
 from neuronunit.optimization.data_transport_container import DataTC
+=======
+    inject_and_plot_model
+)
+import numpy as np
+from neuronunit.models.optimization_model_layer import OptimizationModel
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 from jithub.models import model_classes
 import matplotlib.pyplot as plt
 import quantities as qt
@@ -52,6 +59,7 @@ class testOptimizationAllenMultiSpike(unittest.TestCase):
             471819401,
         ]
         self.specimen_id = self.ids[1]
+<<<<<<< HEAD
 
     def optimize_job(self, model_type, score_type=ZScore):
         find_sweep_with_n_spikes = 8
@@ -62,6 +70,16 @@ class testOptimizationAllenMultiSpike(unittest.TestCase):
         fixed_current = 122 * qt.pA
         if model_type == "ADEXP":
             NGEN = 155
+=======
+    def optimize_job(self, model_type, score_type=ZScore):
+        find_sweep_with_n_spikes = 8
+        from jithub.models.model_classes import ADEXPModel
+        model = ADEXPModel()
+        model.params = BPO_PARAMS[model_type]
+        fixed_current = 122 * qt.pA
+        if model_type == "ADEXP":
+            NGEN = 355
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
             MU = 26
         else:
             NGEN = 45
@@ -91,7 +109,11 @@ class testOptimizationAllenMultiSpike(unittest.TestCase):
     def test_opt_relative_diff(self):
         model_type = "ADEXP"
         sum_fit = self.optimize_job(model_type, score_type=RelativeDifferenceScore)
+<<<<<<< HEAD
         assert sum_fit < 72
+=======
+        assert sum_fit < 100
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 
     # this is just to speed up CI tests to avoid timeout.
     @unittest.skip

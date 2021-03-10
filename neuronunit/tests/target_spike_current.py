@@ -11,19 +11,33 @@ from .base import np, pq, ncap, VmTest, scores, AMPL
 DURATION = 2000
 DELAY = 1000
 
+<<<<<<< HEAD
 from neuronunit.optimization.data_transport_container import DataTC
+=======
+#from neuronunit.optimization.data_transport_container import DataTC
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 import os
 import quantities
 import neuronunit
 
+<<<<<<< HEAD
 import dask.bag as db
+=======
+#import dask.bag as db
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 import quantities as pq
 import numpy as np
 import copy
 import pdb
+<<<<<<< HEAD
 from numba import jit
 import time
 import numba
+=======
+#from numba import jit
+import time
+#import numba
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 import copy
 
 import matplotlib as mpl
@@ -127,8 +141,14 @@ class SpikeCountSearch(VmTest):
             """
             dtc.boolean = False
 
+<<<<<<< HEAD
             model = dtc.dtc_to_model()
             model._backend.attrs = dtc.attrs
+=======
+            model = dtc#.dtc_to_model()
+            #print(type(model))
+            #model._backend.attrs = dtc.attrs
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
             params = {
                 "injected_square_current": {
                     "amplitude": None,
@@ -140,6 +160,7 @@ class SpikeCountSearch(VmTest):
             ampl = float(dtc.ampl)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 uc = {"amplitude": ampl * pq.pA, "duration": DURATION, "delay": DELAY}
+<<<<<<< HEAD
 
                 if str("JIT_") in model.backend:
                     _ = model.inject_square_current(**uc)
@@ -147,6 +168,14 @@ class SpikeCountSearch(VmTest):
                     # _ = model._backend.inject_square_current(**uc)
                     # n_spikes_b = model._backend.get_spike_count()
                     # assert n_spikes == n_spikes_b
+=======
+                #print(model._backend)
+                vm = dtc.inject_square_current(**uc)
+                n_spikes = dtc.get_spike_count()
+                # _ = model._backend.inject_square_current(**uc)
+                # n_spikes_b = model._backend.get_spike_count()
+                # assert n_spikes == n_spikes_b
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
                 if float(ampl) < -10.0:
                     dtc.rheobase = {}
                     dtc.rheobase["value"] = None
@@ -212,19 +241,25 @@ class SpikeCountSearch(VmTest):
         def find_target_current(self, dtc):
             # This line should not be necessary:
             # a class, VeryReducedModel has been made to circumvent this.
+<<<<<<< HEAD
             # if hasattr(dtc,'model_path'):
             #    assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
             # dtc = check_current(model.rheobase,dtc)
             # If its not true enter a search, with ranges informed by memory
+=======
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
             cnt = 0
             sub = np.array([0, 0])
             supra = np.array([0, 0])
             ##
             #
             ## Important number
+<<<<<<< HEAD
             # big = 100
+=======
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
             big = 250
             while dtc.boolean == False and cnt < big:
 
@@ -277,11 +312,19 @@ class SpikeCountSearch(VmTest):
                     print("counted out and thus wrong spike count")
             return dtc
 
+<<<<<<< HEAD
         dtc = DataTC()
         dtc.attrs = {}
         for k, v in model.attrs.items():
             dtc.attrs[k] = v
 
+=======
+        #dtc = DataTC()
+        #dtc.attrs = {}
+        #for k, v in model.attrs.items():
+        #    dtc.attrs[k] = v
+        dtc = model
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
         # this is not a perservering assignment, of value,
         # but rather a multi statement assertion that will be checked.
         dtc.backend = model.backend
@@ -447,7 +490,10 @@ class SpikeCountRangeSearch(VmTest):
 
                 else:
                     # Exploit memory of the genes to inform searchable range.
+<<<<<<< HEAD
 
+=======
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
                     # if this model has lineage, assume it didn't mutate that far away from it's ancestor.
                     # using that assumption, on first pass, consult a very narrow range, of test current injection samples:
                     # only slightly displaced away from the ancestors rheobase value.
@@ -559,6 +605,7 @@ class SpikeCountRangeSearch(VmTest):
                 cnt += 1
             return dtc
 
+<<<<<<< HEAD
         dtc = DataTC()
         dtc.attrs = {}
         for k, v in model.attrs.items():
@@ -567,6 +614,17 @@ class SpikeCountRangeSearch(VmTest):
         # this is not a perservering assignment, of value,
         # but rather a multi statement assertion that will be checked.
         dtc.backend = model.backend
+=======
+        #dtc = DataTC()
+        dtc = model
+        #dtc.attrs = {}
+        #for k, v in model.attrs.items():
+        #    dtc.attrs[k] = v
+
+        # this is not a perservering assignment, of value,
+        # but rather a multi statement assertion that will be checked.
+        #dtc.backend = model.backend
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
         dtc = init_dtc(dtc)
 
         prediction = {}

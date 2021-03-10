@@ -2,7 +2,7 @@ from neuronunit.tests.base import VmTest
 import pickle
 import numpy as np
 from allensdk.core.cell_types_cache import CellTypesCache
-from neuronunit.optimization.data_transport_container import DataTC
+from neuronunit.models.optimization_model_layer import OptimizationModel
 
 from neuronunit.optimization.optimization_management import (
     multi_spiking_feature_extraction,
@@ -27,7 +27,7 @@ class AllenTest(VmTest):
 
     def generate_prediction(self, model=None):
         if self.prediction is None:
-            dtc = DataTC()
+            dtc = OptimizationModel()
             dtc.backed = model.backend
             dtc.attrs = model.attrs
             dtc.rheobase = model.rheobase

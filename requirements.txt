@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 typing
 typing-extensions
+=======
+asv
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 dask
 lxml==4.4.1
 elephant==0.4.1
@@ -30,6 +34,9 @@ quantities==0.12.4
 dask[bag]
 fsspec>=0.3.3
 cython
+<<<<<<< HEAD
 git+https://github.com/russelljjarvis/sciunit@dev
 git+https://github.com/russelljjarvis/BluePyOpt@neuronunit_reduced_cells
+=======
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 efel
