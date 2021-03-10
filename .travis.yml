@@ -21,13 +21,25 @@ install:
   - conda info -a
   - pip install -U pip
   - pip install .
+  - pip install sklearn
+  - pip install seaborn
   - pip install coveralls
   - pip install pylmeasure # required by morphology tests
+  - sh build.sh
+
 ######################################################
 
 script:
   - export NC_HOME='.' # NeuroConstruct isn't used but tests need this
                        # variable set to pass.
+<<<<<<< HEAD
+  - cd neuronunit/unit_test; python -m unittest scores_unit_test.py; cd -;
+  - cd neuronunit/unit_test; python -m unittest rheobase_dtc_test.py; cd -;
+  #- sh test.sh
+=======
+  #- cd neuronunit/unit_test; python -m unittest scores_unit_test.py; cd -;
+  #- cd neuronunit/unit_test; python -m unittest rheobase_model_test.py; cd -;
   - sh test.sh
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
 after_success:
   - coveralls
