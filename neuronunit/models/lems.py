@@ -15,7 +15,7 @@ from neuroml import nml
 
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
-from sciunit.utils import TemporaryDirectory
+from tempfile import TemporaryDirectory
 from sciunit.models.runnable import RunnableModel
 
 
