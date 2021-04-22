@@ -10,10 +10,7 @@ import collections
 
 import sys
 KERNEL = ('ipykernel' in sys.modules)
-try:
-    from io import StringIO
-except ImportError:
-    from StringIO import StringIO
+from io import StringIO
 
 import numpy as np
 import pandas as pd
@@ -157,53 +154,113 @@ def tiled_figure(figname='', frames=1, columns=2,
 
     return axs
 
-def plot_surface(model_param0,model_param1,td,history):
+
+
+import numpy as np
+import matplotlib
+matplotlib.rcParams.update({'font.size':16})
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.spatial
+import pylab
+
+def plot_surface(fig_trip,ax_trip,model_param0,model_param1,history):
     '''
 
     Move this method back to plottools
     Inputs should be keys, that are parameters see new function definition below
     '''
-
-    import numpy as np
-    import matplotlib
-    matplotlib.rcParams.update({'font.size':16})
-    import matplotlib.pyplot as plt
-
-
+    td = list(history.genealogy_history[1].dtc.attrs.keys())
     x = [ i for i,j in enumerate(td) if str(model_param0) == j ][0]
     y = [ i for i,j in enumerate(td) if str(model_param1) == j ][0]
+    z = [ i for i,j in enumerate(td) if str(model_param1) == j ][0]
+
     all_inds = history.genealogy_history.values()
     sums = np.array([np.sum(ind.fitness.values) for ind in all_inds])
-    #quads = []
-    '''
-    for k in range(1,9):
-        for i,j in enumerate(td):
-            if i+k < 10:
-                quads.append((td[i],td[i+k],i,i+k))
-    all_inds1 = list(history.genealogy_history.values())
-    '''
-    #import pdb; pdb.set_trace()
-    #print(all_inds1[x])
-
-    #ab = [ (all_inds1[x],all_inds1[y]) for y in all_inds1 ]
 
     xs = np.array([ind[x] for ind in all_inds])
     ys = np.array([ind[y] for ind in all_inds])
+    zs = np.array([ind[z] for ind in all_inds])
+
     min_ys = ys[np.where(sums == np.min(sums))]
     min_xs = xs[np.where(sums == np.min(sums))]
-    plt.clf()
-    fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
+    min_zs = xs[np.where(sums == np.min(sums))]
+
+    data = np.zeros((len(xs),3))
+    data[:,0] = xs
+    data[:,1] = ys
+    data[:,2] = zs
+
+
+    #data = np.random.random((12,3))            # arbitrary 3D data set
+    #tri = scipy.spatial.Delaunay( data[:,:2] ) # take the first two dimensions
+
+    #pylab.triplot( data[:,0], data[:,1], tri.simplices.copy() )
+    #pylab.plot( data[:,0], data[:,1], 'ro' ) ;
+
+    #fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
     trip_axis = ax_trip.tripcolor(xs,ys,sums,20,norm=matplotlib.colors.LogNorm())
     plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
-    fig_trip.colorbar(trip_axis, label='Sum of Objective Errors ')
-    ax_trip.set_xlabel('Parameter '+str((td[x])))
-    ax_trip.set_ylabel('Parameter '+str((td[y])))
+    #plot_axis.colorbar(trip_axis, label='Sum of Objective Errors ')
+    if type(td) is not type(None):
+        ax_trip.set_xlabel('Parameter '+str((td[x])))
+        ax_trip.set_ylabel('Parameter '+str((td[y])))
     plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
-    fig_trip.tight_layout()
-    if not KERNEL:
-        plt.savefig('surface'+str((td[z])+str('.png')))
-    else:
-        plt.show()
+    #plot_axis.tight_layout()
+    return ax_trip,plot_axis
+
+def plot_vm(hof,ax,key):
+    ax.cla()
+    ax.set_title(' {0} vs  $V_{M}$'.format(key[0]))
+    best_dtc = hof[0].dtc
+    best_rh = hof[0].dtc.rheobase
+    neuron = None
+    model = ReducedModel(path_params['model_path'],name = str('regular_spiking'),backend =('NEURON',{'DTC':best_dtc}))
+    params = {'injected_square_current':
+            {'amplitude': best_rh, 'delay':DELAY, 'duration':DURATION}}
+    results = modelrs.inject_square_current(params)
+    vm = model.get_membrane_potential()
+    times = vm.times
+    ax.plot(times,vm)
+    return ax
+
+def plotss(matrix,hof):
+    dim = np.shape(matrix)[0]
+    print(dim)
+    cnt = 0
+    fig,ax = plt.subplots(dim,dim,figsize=(10,10))
+    flat_iter = []
+    for i,k in enumerate(matrix):
+        for j,r in enumerate(k):
+            keys = list(r[0])
+            gr = r[1]
+            if i==j:
+                ax[i,j] = plot_vm(hof,ax[i,j],keys)
+            if i>j:
+                ax[i,j] = plot_surface(gr,ax[i,j],keys,imshow=False)
+            if i < j:
+                ax[i,j] = plot_scatter(hof,ax[i,j],keys)
+        print(i,j)
+    plt.savefig(str('surface_and_vm.png'))
+    return None
+
+def scatter_surface(fig_trip,ax_trip,model_param0,model_param1,history):
+    '''
+
+    Move this method back to plottools
+    Inputs should be keys, that are parameters see new function definition below
+    '''
+    td = list(history.genealogy_history[1].dtc.attrs.keys())
+    x = [ i for i,j in enumerate(td) if str(model_param0) == j ][0]
+    y = [ i for i,j in enumerate(td) if str(model_param1) == j ][0]
+
+    all_inds = history.genealogy_history.values()
+    z = np.array([np.sum(ind.fitness.values) for ind in all_inds])
+
+    xs = np.array([ind[x] for ind in all_inds])
+    ys = np.array([ind[y] for ind in all_inds])
+
+    return xs,ys,z
 
 def shadow(dtcpop,best_vm):#This method must be pickle-able for ipyparallel to work.
     '''
@@ -504,96 +561,6 @@ def plot_log(log): #logbook
     else:
         fig.show()
 
-def try_hard_coded0():
-    params0 = {'C': '0.000107322241995',
-    'a': '0.177922330376',
-    'b': '-5e-09',
-    'c': '-59.5280130394',
-    'd': '0.153178745992',
-    'k': '0.000879131572692',
-    'v0': '-73.3255584633',
-    'vpeak': '34.5214177196',
-    'vr': '-71.0211905343',
-    'vt': '-46.6016774842'}
-    #rheobase = {'value': array(131.34765625) * pA}
-    return params0
-
-
-
-def try_hard_coded1():
-    params1 = {'C': '0.000106983591242',
-    'a': '0.480856799107',
-    'b': '-5e-09',
-    'c': '-57.4022276619',
-    'd': '0.0818117582621',
-    'k': '0.00114004749537',
-    'v0': '-58.4899756601',
-    'vpeak': '36.6769758895',
-    'vr': '-63.4080852004',
-    'vt': '-44.1074682812'}
-    #rheobase = {'value': array(106.4453125) * pA}131.34765625
-    return params1
-
-
-
-def plot_suspicious(dtc):
-    import matplotlib.pyplot as plt
-    import numpy as np
-    plt.clf()
-    plt.style.use('ggplot')
-    from neuronunit.models.reduced import ReducedModel
-    from neuronunit.optimization.get_neab import tests as T
-    from neuronunit.optimization import get_neab
-
-    from neuronunit.optimization import evaluate_as_module
-    from neuronunit.optimization.evaluate_as_module import pre_format
-
-    param_list = [try_hard_coded0(), try_hard_coded1()]
-    dtc.vm0 = None
-    dtc.vm1 = None
-    for p in param_list:
-        dtc.attrs = p
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-        model.set_attrs(dtc.attrs)
-        model.rheobase = None
-        score = T[0].judge(model,stop_on_error = False, deep_error = True)
-        dtc.rheobase = score.prediction
-        dtc.vm0 = list(model.results['vm'])
-
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-        model.set_attrs(dtc.attrs)
-        dtc.rheobase = score.prediction
-        dtc = pre_format(dtc)
-        model.rheobase = dtc.rheobase
-        print(model)
-        print(model.rheobase)
-
-        model.inject_square_current(dtc.vtest[0])
-        model._backend.local_run()
-        assert model.get_spike_count() == 1
-        print(model.get_spike_count(),bool(model.get_spike_count() == 1))
-
-        model = None
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-        model.set_attrs(dtc.attrs)
-        model.inject_square_current(dtc.vtest[-1])
-        dtc.vm1 = list(model.results['vm'])
-        dtc.tvec = list(model.results['t'])
-
-        plt.clf()
-        plt.style.use('ggplot')
-        fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
-        plt.plot(dtc.tvec,dtc.vm0,linewidth=1, color='red',label='suspc rheobase')
-        plt.plot(dtc.tvec,dtc.vm1,linewidth=1, color='blue',label='suspc spike width')
-        plt.legend()
-        plt.ylabel('$V_{m}$ mV')
-        plt.xlabel('ms')
-        if not KERNEL:
-            plt.savefig(str('suspicious_rheobase')+str(p)+'vm_versus_t.png', format='png', dpi=1200)
-        else:
-            plt.show()
-
-
 def dtc_to_plotting(dtc):
     dtc.vm0 = None
     dtc.vm1 = None
@@ -617,11 +584,6 @@ def dtc_to_plotting(dtc):
 
     model.inject_square_current(parameter_list[0])
     model._backend.local_run()
-    print('\n\n\n\n\n\n')
-    print(type(model.get_spike_count()), ' < type')
-    print(model.get_spike_count(),bool(model.get_spike_count() == 1))
-    print('\n\n\n\n\n\n')
-
     assert model.get_spike_count() == 1 or model.get_spike_count() == 0
 
     dtc.vm0 = list(model.results['vm'])
@@ -925,7 +887,7 @@ def pca(best_worst,vmpop,fitnesses,td):
     py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
     py.iplot(fig, filename='improved_names.svg',image='svg')
 
-'''
+
 
 def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must be pickle-able for ipyparallel to work.
     #A method to plot the best and worst candidate solution waveforms side by side
@@ -981,11 +943,7 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
-'''
-
-'''
-def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel to work.
-
+def sp_spike_width(best_worst):
     #A method to plot the best and worst candidate solution waveforms side by side
     #Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
     #is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
@@ -1318,7 +1276,7 @@ def pandas_rh_search(vmoffspring):
     s4 = df4.style.background_gradient(cmap = shrunk_cmap)
 
     return df0,df1,df2,df3,df4
-'''
+
 def not_just_mean(log,hypervolumes):
     '''
     https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
@@ -1464,7 +1422,7 @@ def bar_chart(vms,name=None):
         delta.append(unit_delta)
         print('observation {0} versus prediction {1}'.format(unit_observations,unit_predictions))
         print('unit delta', unit_delta)
-        sv = score.sort_key
+        sv = score.norm_score
         test_dic[str(v)] = (float(unit_observations), float(unit_predictions), unit_delta)
 
 

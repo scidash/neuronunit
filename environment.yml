@@ -6,7 +6,15 @@ dependencies:
 - pip:
   - neo==0.4
   - elephant
-  - scoop
-  - git+http://github.com/scidash/sciunit@dev#egg=sciunit-1.5.6
-  - git+http://github.com/rgerkin/AllenSDK@python3.5#egg=allensdk-0.12.4.1
-  - git+http://github.com/rgerkin/pyNeuroML@master#egg=pyneuroml-0.2.3
+  - dask
+  - numba
+  - streamlit
+  - sklearn
+  - seaborn
+  - frozendict
+  - plotly
+  - asciiplotlib
+  - ipfx
+  - git+https://github.com/russelljjarvis/jit_jub@neuronunit
+  - git+https://github.com/russelljjarvis/BluePyOpt@neuronunit_reduced_cells
+  - git+https://github.com/russelljjarvis/sciunit@dev

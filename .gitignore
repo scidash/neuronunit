@@ -1,4 +1,10 @@
+*.vscode
 *.py[co]
+*.pkl
+*.p
+*do-not-add*
+neuronunit/examples/model_zoo/*.nml
+*.hoc
 
 # Packages
 *.egg
@@ -66,3 +72,6 @@ neuronunit/models/NeuroML2/*.py
 neuronunit/unit_test/bbp.py
 neuronunit/unit_test/get_tau.py
 scratch
+GeneratedFiles
+docs/tmp/
+tmp/
