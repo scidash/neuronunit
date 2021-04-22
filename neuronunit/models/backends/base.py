@@ -16,9 +16,9 @@ from pyneuroml import pynml
 from neo.core import AnalogSignal
 import neuronunit.capabilities.spike_functions as sf
 import sciunit
+from tempfile import TemporaryDirectory
 from sciunit.models.backends import Backend, BackendException
-from sciunit.utils import dict_hash, import_module_from_path, \
-                          TemporaryDirectory
+from sciunit.utils import dict_hash, import_module_from_path
 
 # Test for NEURON support in a separate python process
 NEURON_SUPPORT = (os.system("python -c 'import neuron' > /dev/null 2>&1") == 0)
