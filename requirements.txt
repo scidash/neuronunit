@@ -4,15 +4,15 @@ neo==0.5.2
 elephant==0.4.1
 igor==0.3
 allensdk==0.14.5
-pyNeuroML @ git+https://github.com/rgerkin/pyneuroml@master#egg=pyneuroml-9999
+pyNeuroML
 pyNN>=0.9
 execnet
-sciunit @ git+https://github.com/scidash/sciunit@dev#egg=sciunit-9999
+sciunit
 requests
 validators
 lmfit
 numba
 dask[complete]
 deap
-bluepyopt @ git+https://github.com/russelljjarvis/BluePyOpt@scidash#egg=bluepyopt-9999
+bluepyopt
 pylmeasure
