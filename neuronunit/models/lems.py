@@ -15,7 +15,7 @@ from neuroml import nml
 
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
-from sciunit.utils import TemporaryDirectory
+from tempfile import TemporaryDirectory
 from sciunit.models.runnable import RunnableModel
 
 
@@ -60,6 +60,7 @@ class LEMSModel(RunnableModel):
 
         If it is not a URL, just consider it a local path to the contents.
         """
+        possible_url = str(possible_url)
         if validators.url(possible_url):
             if base is None:
                 base = os.getcwd()  # Location to which to download model files

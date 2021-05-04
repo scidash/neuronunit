@@ -44,7 +44,7 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
     # Fix for 0-length spike train issue in elephant.
     try:
         assert len(spike_train) != 0
-    except TypeError:
+    except (AssertionError, TypeError):
         spike_train = neo.core.SpikeTrain([], t_start=spike_train.t_start,
                                           t_stop=spike_train.t_stop,
                                           units=spike_train.units)
@@ -54,7 +54,11 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
 
     # This code checks that you are not asking for a window into an array,
     # with out of bounds indicies.
-    t = spike_train[0]
+    try:
+        t = spike_train[0]
+    except IndexError:
+        sciunit.log('Spike train had length 0; no spike waveforms could be extracted.', level=40)
+        return None
     if t-width/2.0 > 0.0*ms:
         too_short = False
 

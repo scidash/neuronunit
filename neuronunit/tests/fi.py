@@ -8,11 +8,11 @@ import os
 import multiprocessing
 import copy
 
-import dask.bag as db
-
+import dask.bag as db    
 import neuronunit
 from neuronunit.optimization.data_transport_container import DataTC
 from neuronunit.models.reduced import ReducedModel
+from sciunit import log
 from .base import np, pq, ncap, VmTest, scores
 
 N_CPUS = multiprocessing.cpu_count()
@@ -48,7 +48,7 @@ class RheobaseTest(VmTest):
 
     default_params = dict(VmTest.default_params)
     default_params.update({'amplitude': 100*pq.pA,
-                           'duration': 1000*pq.ms,
+                           #'duration': 1000*pq.ms,
                            'tolerance': 1.0*pq.pA})
 
     params_schema = dict(VmTest.params_schema)
@@ -71,17 +71,14 @@ class RheobaseTest(VmTest):
         lookup = self.threshold_FI(model, units)
         sub = np.array([x for x in lookup if lookup[x] == 0])*units
         supra = np.array([x for x in lookup if lookup[x] > 0])*units
-        if self.verbose:
-            if len(sub):
-                print("Highest subthreshold current is %s"
-                      % (float(sub.max())*units))
-            else:
-                print("No subthreshold current was tested.")
-            if len(supra):
-                print("Lowest suprathreshold current is %s"
-                      % supra.min())
-            else:
-                print("No suprathreshold current was tested.")
+        if len(sub):
+            log("Highest subthreshold current is %s" % (float(sub.max())*units))
+        else:
+            log("No subthreshold current was tested.")
+        if len(supra):
+            log("Lowest suprathreshold current is %s" % supra.min())
+        else:
+            log("No suprathreshold current was tested.")
         if len(sub) and len(supra):
             rheobase = supra.min()
         else:
@@ -405,9 +402,9 @@ def find_rheobase(self, dtc):
                 dtc.rheobase = supra.min()*pq.pA
                 dtc.boolean = True
                 return dtc
-
-        if self.verbose >= 2:
-            print("Try %d: SubMax = %s; SupraMin = %s" %
-                  (cnt, sub.max() if len(sub) else None,
-                   supra.min() if len(supra) else None))
+        
+        msg = ("Try %d: SubMax = %s; SupraMin = %s" %
+               (cnt, sub.max() if len(sub) else None,
+                supra.min() if len(supra) else None))
+        log(msg, level=20)
     return dtc

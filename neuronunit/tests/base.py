@@ -38,19 +38,9 @@ class VmTest(ProtocolToFeaturesTest):
 
     ephysprop_name = ''
 
-    observation_schema = [("Mean, Standard Deviation, N",
-                           {'mean': {'units': True, 'required': True},
-                            'std': {'units': True, 'min': 0, 'required': True},
-                            'n': {'type': 'integer', 'min': 1}}),
-                          ("Mean, Standard Error, N",
-                           {'mean': {'units': True, 'required': True},
-                            'sem': {'units': True, 'min': 0, 'required': True},
-                            'n': {'type': 'integer', 'min': 1,
-                                  'required': True}})]
-
     default_params = {'amplitude': 0.0*pq.pA,
                       'delay': 100.0*pq.ms,
-                      'duration': 300.0*pq.ms,
+                      'duration': 500.0*pq.ms,
                       'dt': 0.025*pq.ms,
                       'padding': 200*pq.ms}
 
@@ -68,13 +58,6 @@ class VmTest(ProtocolToFeaturesTest):
         self.params['tmax'] = (self.params['delay'] +
                                self.params['duration'] +
                                self.params['padding'])
-
-    def validate_observation(self, observation):
-        super(VmTest, self).validate_observation(observation)
-        # Catch another case that is trickier
-        if 'std' not in observation:
-            observation['std'] = observation['sem'] * np.sqrt(observation['n'])
-        return observation
 
     def condition_model(self, model):
         model.set_run_params(t_stop=self.params['tmax'])
