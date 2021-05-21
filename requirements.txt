@@ -1,9 +1,9 @@
 scipy>=0.17
 matplotlib>=2.0
-neo==0.5.2
-elephant==0.4.1
-igor==0.3
-allensdk==0.14.5
+neo
+elephant
+igor
+#allensdk
 pyNeuroML
 pyNN>=0.9
 execnet
@@ -14,5 +14,5 @@ lmfit
 numba
 dask[complete]
 deap
-bluepyopt
+#bluepyopt
 pylmeasure
