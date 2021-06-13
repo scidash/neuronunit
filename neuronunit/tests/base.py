@@ -50,6 +50,8 @@ class VmTest(ProtocolToFeaturesTest):
                      'duration': {'type': 'time', 'min': 0, 'required': False},
                      'amplitude': {'type': 'current', 'required': False},
                      'padding': {'type': 'time', 'min': 0, 'required': False}}
+    
+    state_hide = ['plot_vm']
 
     def _extra(self):
         pass
@@ -80,7 +82,7 @@ class VmTest(ProtocolToFeaturesTest):
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Vm (mV)')
         score.plot_vm = MethodType(plot_vm, score)  # Bind to the score.
-        score.unpicklable.append('plot_vm')
+        #score.unpicklable.append('plot_vm')
 
     @classmethod
     def neuroelectro_summary_observation(cls, neuron, cached=False):
@@ -151,10 +153,10 @@ class VmTest(ProtocolToFeaturesTest):
                    for key in ['duration', 'delay', 'amplitude']}
         return current
 
-    @property
-    def state(self):
-        state = super(VmTest, self).state
-        return self._state(state=state, exclude=['unpicklable', 'verbose'])
+    #@property
+    #def state(self):
+    #    state = super(VmTest, self).state
+    #    return self._state(state=state, exclude=['unpicklable', 'verbose'])
 
 
 class FakeTest(sciunit.Test):
