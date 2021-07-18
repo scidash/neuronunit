@@ -2,10 +2,7 @@
 
 import os
 import shutil
-try:
-    from urllib.parse import urljoin
-except ImportError:
-    from urlparse import urljoin
+from urllib.parse import urljoin
 
 import requests
 import validators
@@ -68,13 +65,13 @@ class LEMSModel(RunnableModel):
             download_path = os.path.join(base, file_name)
             try:
                 r = requests.get(possible_url, allow_redirects=True)
+                if r.status_code != 200:
+                    print("URL %s gave a response code %d" % (possible_url, r.status_code))
+                with open(download_path, 'wb') as f:
+                    f.write(r.content)
             except requests.ConnectionError:
                 print("Could not connect to server at %s" % possible_url)
-            if r.status_code != 200:
-                print("URL %s gave a response code %d" % (possible_url,
-                                                          r.status_code))
-            with open(download_path, 'wb') as f:
-                f.write(r.content)
+            
             self.from_url = possible_url
         else:
             download_path = possible_url
@@ -208,3 +205,20 @@ class LEMSModel(RunnableModel):
         if not hasattr(self, '_temp_dir'):
             self._temp_dir = TemporaryDirectory()
         return self._temp_dir
+
+    def get_state_variables(self):
+        """
+        Parses LEMS xml file and gets simulation's state variables from
+        OutputFile element.
+
+        Returns:
+            Dict of type "string: string" with the format "id: quantity"
+
+         """
+        lems_tree = etree.parse(self.lems_file_path)
+        state_variables = {'t': 't'}
+        for output_column in lems_tree.iter('OutputColumn'):
+            id = output_column.attrib['id']
+            quantity = output_column.attrib['quantity']
+            state_variables[id] = quantity
+        return state_variables

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 scipy>=0.17
 matplotlib>=2.0
 neo
@@ -16,3 +17,47 @@ dask[complete]
 deap
 #bluepyopt
 pylmeasure
+=======
+<<<<<<< HEAD
+typing
+typing-extensions
+=======
+asv
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
+dask
+lxml==4.4.1
+elephant==0.4.1
+mock==3.0.5
+tqdm==4.48.2
+neo==0.5.2
+plotly==4.5.2
+simplejson==3.17.0
+future==0.17.1
+streamlit
+pandas==1.1.0
+matplotlib
+seaborn
+quantities==0.12.4
+Jinja2==2.10.3
+Pebble==4.5.3
+backports.statistics==0.1.0
+python_dateutil
+scikit_learn==0.23.2
+frozendict==1.2
+neo==0.5.2
+numba
+tqdm==4.48.2
+allensdk==0.16.3
+natsort==7.0.1
+nbformat==4.4.0
+quantities==0.12.4
+dask[bag]
+fsspec>=0.3.3
+cython
+<<<<<<< HEAD
+git+https://github.com/russelljjarvis/sciunit@dev
+git+https://github.com/russelljjarvis/BluePyOpt@neuronunit_reduced_cells
+=======
+>>>>>>> 9fb0c2e613a1bf059f38eeeae80582d0cfb11f2f
+efel
+>>>>>>> dev
