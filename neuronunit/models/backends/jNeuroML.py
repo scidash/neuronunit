@@ -1,6 +1,7 @@
 """jNeuroML Backend."""
 
 import os
+import pathlib
 import io
 import tempfile
 
@@ -11,12 +12,11 @@ from .base import Backend
 from elephant.spike_train_generation import threshold_detection
         
 
-
 class jNeuroMLBackend(Backend):
     """Use for simulation with jNeuroML, a reference simulator for NeuroML."""
 
     name = 'jNeuroML'
-
+    
     def init_backend(self, *args, **kwargs):
         """Initialize the jNeuroML backend."""
         assert hasattr(self.model, 'set_lems_run_params'), \
@@ -39,7 +39,7 @@ class jNeuroMLBackend(Backend):
         self.model.run_params['injected_square_current'] = current
         self.set_run_params()  # Doesn't work yet.
         self._backend_run()
-        self.vm
+
     def set_stop_time(self, t_stop):
         """Set the stop time of the simulation."""
         self.model.run_params['t_stop'] = t_stop
@@ -49,22 +49,40 @@ class jNeuroMLBackend(Backend):
         """Set the time step of the simulation."""
         self.model.run_params['dt'] = dt
         self.set_run_params()
+
     def get_spike_count(self):
         thresh = threshold_detection(self.vm)
         return len(thresh)
 
     def _backend_run(self):
         """Run the simulation."""
-        f = pynml.run_lems_with_jneuroml
-        self.exec_in_dir = tempfile.mkdtemp()
-        lems_path = os.path.dirname(self.model.orig_lems_file_path)
+        
+        try:
+            self.exec_in_dir = self.model.temp_dir.name
+        except:
+            self.exec_in_dir = tempfile.mkdtemp()
+        
+        path = pathlib.Path(self.exec_in_dir)
+        (path / 'results').mkdir(exist_ok=True)
+        
         with redirect_stdout(self.stdout):
-            results = f(self.model.lems_file_path,
-                        paths_to_include=[lems_path],
-                        skip_run=self.model.skip_run,
-                        nogui=self.model.run_params['nogui'],
-                        load_saved_data=True, plot=False,
-                        exec_in_dir=self.exec_in_dir,
-                        verbose=self.model.run_params['v'])
-            self.vm = results['vm']
+            results = self._get_results()
+        if results is None or not results:
+            print(("No results returned: buffered error, warning, "
+                   "and notice messages follow:\n"))
+            print(self.stdout.getvalue())
+        return results
+    
+    def _get_results(self):
+        lems_path = os.path.dirname(self.model.orig_lems_file_path)
+        f = pynml.run_lems_with_jneuroml
+        results = f(self.model.lems_file_path,
+                    paths_to_include=[lems_path],
+                    skip_run=self.model.skip_run,
+                    nogui=self.model.run_params['nogui'],
+                    load_saved_data=True,
+                    plot=False,
+                    exec_in_dir=self.exec_in_dir,
+                    exit_on_fail=False,
+                    verbose=self.model.run_params['v'])
         return results
