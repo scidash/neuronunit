@@ -80,7 +80,6 @@ class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
     )
 
     def generate_prediction(self, model):
-        print(self.params["injected_square_current"])
         model.inject_square_current(**self.params["injected_square_current"])
         prediction = super(InjectedCurrentAPWidthTest, self).generate_prediction(model)
 
@@ -110,7 +109,12 @@ class APAmplitudeTest(VmTest):
         # ProducesActionPotentials capability.
         model.inject_square_current(**self.params["injected_square_current"])
 
-        heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
+        amps = model.get_AP_amplitudes()
+        threshes = model.get_AP_thresholds()
+        if len(amps) and len(threshes):
+            heights = amps - threshes
+        else:
+            heights = []
         # Put prediction in a form that compute_score() can use.
         prediction = {
             "mean": np.mean(heights) if len(heights) else None,
@@ -203,5 +207,5 @@ class InjectedCurrentAPThresholdTest(InjectedCurrent, APThresholdTest):
     )
 
     def generate_prediction(self, model):
-        model.inject_square_current(self.params["injected_square_current"])
+        model.inject_square_current(**self.params["injected_square_current"])
         return super(InjectedCurrentAPThresholdTest, self).generate_prediction(model)

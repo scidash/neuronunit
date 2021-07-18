@@ -57,7 +57,7 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
     try:
         t = spike_train[0]
     except IndexError:
-        sciunit.log('Spike train had length 0; no spike waveforms could be extracted.', level=40)
+        sciunit.log('Spike train had length 0; no spike waveforms could be extracted.')
         return None
     if t-width/2.0 > 0.0*ms:
         too_short = False

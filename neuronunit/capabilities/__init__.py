@@ -102,19 +102,19 @@ class ProducesActionPotentials(ProducesSpikes,
     def get_AP_widths(self):
         """Get widths of action potentials."""
         action_potentials = self.get_APs()
-        widths = spikes2widths(action_potentials)
+        widths = spikes2widths(action_potentials) if action_potentials else []
         return widths
 
     def get_AP_amplitudes(self):
         """Get amplitudes of action potentials."""
         action_potentials = self.get_APs()
-        amplitudes = spikes2amplitudes(action_potentials)
+        amplitudes = spikes2amplitudes(action_potentials) if action_potentials else []
         return amplitudes
 
     def get_AP_thresholds(self):
         """Get thresholds of action potentials."""
         action_potentials = self.get_APs()
-        thresholds = spikes2thresholds(action_potentials)
+        thresholds = spikes2thresholds(action_potentials) if action_potentials else []
         return thresholds
 
 
@@ -123,17 +123,17 @@ class ReceivesSquareCurrent(sciunit.Capability):
     a square pulse.
     """
 
-    def inject_square_current(self, current):
+    def inject_square_current(self, amplitude=0*pq.pA, delay=0*pq.ms, duration=0*pq.ms):
         """Injects somatic current into the model.
 
         Parameters
         ----------
-        current : a dictionary like:
-                        {'amplitude':-10.0*pq.pA,
-                         'delay':100*pq.ms,
-                         'duration':500*pq.ms}}
-                  where 'pq' is the quantities package
-        This describes the current to be injected.
+        amplitude: e.g. -10.0*pq.pA
+        delay: e.g. 100*pq.ms,
+        duration: e.g. 500*pq.ms
+        
+        where 'pq' is the quantities package
+        This describes the shape of the square current to be injected.
         """
         raise NotImplementedError()
 

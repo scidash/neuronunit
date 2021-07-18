@@ -34,9 +34,9 @@ class jNeuroMLBackend(Backend):
         """Sey the backend runtime parameters, i.e. simulation parameters."""
         self.model.set_lems_run_params()
 
-    def inject_square_current(self, current):
+    def inject_square_current(self, **kwargs):
         """Inject a square current into the cell."""
-        self.model.run_params['injected_square_current'] = current
+        self.model.run_params['injected_square_current'] = kwargs
         self.set_run_params()  # Doesn't work yet.
         self._backend_run()
 

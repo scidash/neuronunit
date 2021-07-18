@@ -64,6 +64,12 @@ class VmTest(ProtocolToFeaturesTest):
                 "n": {"type": "integer", "min": 1, "required": True},
             },
         ),
+        (
+            "Value",
+            {
+                "value": {"units": True, "required": True},
+            },
+        ),
     ]
 
     default_params = {
@@ -94,7 +100,7 @@ class VmTest(ProtocolToFeaturesTest):
     def validate_observation(self, observation):
         super(VmTest, self).validate_observation(observation)
         # Catch another case that is trickier
-        if "std" not in observation:
+        if "sem" in observation and "std" not in observation:
             observation["std"] = observation["sem"] * np.sqrt(observation["n"])
         return observation
 

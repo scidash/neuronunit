@@ -50,12 +50,13 @@ class ReducedModel(LEMSModel,
         spike_train = sf.get_spike_train(vm)
         return spike_train
 
-    def inject_square_current(self, current):
-        assert isinstance(current, dict)
-        assert all(x in current for x in
-                   ['amplitude', 'delay', 'duration'])
-        self.set_run_params(injected_square_current=current)
-        self._backend.inject_square_current(current)
+    def inject_square_current(self, **kwargs):
+        for key, value in kwargs.items():
+            assert key in ['amplitude', 'delay', 'duration']
+            assert isinstance(value, pq.Quantity)
+        self.set_run_params(injected_square_current=kwargs)
+        self._backend.inject_square_current(**kwargs)
+
 
 class VeryReducedModel(RunnableModel,
                    cap.ReceivesCurrent,
